@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\GoalController;
+use App\Http\Controllers\Api\V1\StreakController;
 
 Route::prefix('v1')->group(function () {
 

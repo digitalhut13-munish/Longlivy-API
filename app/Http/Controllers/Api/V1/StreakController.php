@@ -8,7 +8,7 @@ use App\Services\Streak\StreakService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class StreakController extends Controller
+class StreakController extends Controller 
 {
     public function __construct(
         private readonly StreakService $streakService
