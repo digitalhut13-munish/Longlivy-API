@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\GoalController;
 
 Route::prefix('v1')->group(function () {
 
@@ -49,7 +50,75 @@ Route::prefix('v1')->group(function () {
                 'logout',
             ]);
 
+            
+            /*
+            |--------------------------------------------------------------------------
+            | Goals
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/goals', [
+                GoalController::class,
+                'index',
+            ]);
+
+            Route::post('/goals', [
+                GoalController::class,
+                'store',
+            ]);
+
+            Route::get('/goals/{goal}', [
+                GoalController::class,
+                'show',
+            ]);
+
+            Route::put('/goals/{goal}', [
+                GoalController::class,
+                'update',
+            ]);
+
+            Route::delete('/goals/{goal}', [
+                GoalController::class,
+                'destroy',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Goal Progress
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/goals/{goal}/progress', [
+                GoalController::class,
+                'progress',
+            ]);
+
+            Route::post('/goals/{goal}/progress', [
+                GoalController::class,
+                'storeProgress',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | Streaks
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get('/streaks', [
+                StreakController::class,
+                'index',
+            ]);
+
+            Route::get('/streaks/{type}', [
+                StreakController::class,
+                'show',
+            ]);
+
+
+
         });
+
+
 
     });
 
