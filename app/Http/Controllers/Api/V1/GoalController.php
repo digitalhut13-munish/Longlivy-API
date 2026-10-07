@@ -85,9 +85,25 @@ class GoalController extends Controller
     ): JsonResponse {
         $this->authorize('update', $goal);
 
+        $data = $request->validated();
+
+        if ($data === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No updatable fields received.',
+                'errors' => [
+                    'body' => [
+                        'Send the payload as JSON with '
+                        . 'Content-Type: application/json. Note that '
+                        . 'multipart/form-data is not supported for PUT.',
+                    ],
+                ],
+            ], 422);
+        }
+
         $goal = $this->goalService->update(
             $goal,
-            $request->validated()
+            $data
         );
 
         return response()->json([
