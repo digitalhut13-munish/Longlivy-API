@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, HasFactory;
 
     protected $fillable = [
         'name',
@@ -44,5 +45,10 @@ class User extends Authenticatable
     public function streaks(): HasMany
     {
         return $this->hasMany(UserStreak::class);
+    }
+
+    public function fastings(): HasMany
+    {
+        return $this->hasMany(Fasting::class);
     }
 }
