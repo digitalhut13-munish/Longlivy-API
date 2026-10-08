@@ -78,4 +78,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Favorite::class);
     }
+
+    public function meditationSessions(): HasMany
+    {
+        return $this->hasMany(MeditationSession::class);
+    }
+
+    public function meditationReminders(): HasMany
+    {
+        return $this->hasMany(MeditationReminder::class);
+    }
 }

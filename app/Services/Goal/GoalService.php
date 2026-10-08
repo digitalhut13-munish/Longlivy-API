@@ -60,4 +60,29 @@ class GoalService
             ->orderByDesc('date')
             ->get();
     }
+
+    public function incrementProgress(
+        Goal $goal,
+        string $date,
+        float $delta
+    ): GoalProgress {
+        $existing = $goal->progress()
+            ->whereDate('date', $date)
+            ->first();
+
+        $value = round(
+            (float) ($existing?->value ?? 0) + $delta,
+            2
+        );
+
+        return $goal->progress()->updateOrCreate(
+            [
+                'date' => $date,
+            ],
+            [
+                'value' => $value,
+                'completed' => $value >= (float) $goal->target_value,
+            ]
+        );
+    }
 }

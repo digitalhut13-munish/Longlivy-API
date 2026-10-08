@@ -148,7 +148,7 @@ Route::delete('/recipes/{recipe}', [
 
 /*
 |--------------------------------------------------------------------------
-| Favorites (food, meal; meditation added with the meditation module)
+| Favorites (food, meal, meditation)
 |--------------------------------------------------------------------------
 */
 

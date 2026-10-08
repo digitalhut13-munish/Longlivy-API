@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Favorite;
 use App\Models\Food;
 use App\Models\Meal;
+use App\Models\Meditation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,6 +34,7 @@ class FavoriteResource extends JsonResource
         return match ($this->favoritable_type) {
             Food::class => Favorite::TYPE_FOOD,
             Meal::class => Favorite::TYPE_MEAL,
+            Meditation::class => Favorite::TYPE_MEDITATION,
             default => class_basename($this->favoritable_type),
         };
     }
@@ -49,6 +51,16 @@ class FavoriteResource extends JsonResource
 
         if ($target instanceof Meal) {
             return (new MealResource($target))->toArray($this->parentRequest());
+        }
+
+        if ($target instanceof Meditation) {
+            return $target->only([
+                'id',
+                'type',
+                'title',
+                'duration_minutes',
+                'status',
+            ]);
         }
 
         return $target->only(['id', 'title', 'status']);

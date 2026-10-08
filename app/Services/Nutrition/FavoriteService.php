@@ -5,6 +5,7 @@ namespace App\Services\Nutrition;
 use App\Models\Favorite;
 use App\Models\Food;
 use App\Models\Meal;
+use App\Models\Meditation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +18,7 @@ class FavoriteService
     private const TYPE_MAP = [
         Favorite::TYPE_FOOD => Food::class,
         Favorite::TYPE_MEAL => Meal::class,
+        Favorite::TYPE_MEDITATION => Meditation::class,
     ];
 
     public function list(User $user, ?string $type = null): Collection
@@ -39,6 +41,7 @@ class FavoriteService
         $target = match ($type) {
             Favorite::TYPE_FOOD => $this->resolveFood($user, $id),
             Favorite::TYPE_MEAL => $this->resolveMeal($user, $id),
+            Favorite::TYPE_MEDITATION => $this->resolveMeditation($id),
             default => null,
         };
 
@@ -75,6 +78,14 @@ class FavoriteService
                     'unit' => $item->unit,
                     'calories' => (float) $item->calories,
                 ])->values()->all(),
+            ];
+        }
+
+        if ($target instanceof Meditation) {
+            $favorite->snapshot = [
+                'title' => $target->title,
+                'type' => $target->type,
+                'duration_minutes' => $target->duration_minutes,
             ];
         }
 
@@ -117,5 +128,12 @@ class FavoriteService
     private function resolveMeal(User $user, int $id): ?Meal
     {
         return $user->meals()->with('items')->find($id);
+    }
+
+    private function resolveMeditation(int $id): ?Meditation
+    {
+        return Meditation::where('id', $id)
+            ->where('status', Meditation::STATUS_PUBLISHED)
+            ->first();
     }
 }

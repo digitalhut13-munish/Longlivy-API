@@ -78,6 +78,9 @@ return [
 
         // Maximum technically configurable free-meditation duration.
         'max_duration_minutes' => (int) env('LONGLIVY_MEDITATION_MAX_MINUTES', 180),
+
+        // Duration choices offered before a session is started.
+        'preset_minutes' => [3, 5, 10, 15, 20, 30],
     ],
 
     /*
