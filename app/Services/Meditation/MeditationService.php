@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Goal\GoalService;
 use App\Services\Streak\StreakService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class MeditationService
 {
@@ -84,6 +85,68 @@ class MeditationService
             ->where('status', Meditation::STATUS_PUBLISHED)
             ->with('category')
             ->firstOrFail();
+    }
+
+    public function createCategory(array $data): MeditationCategory
+    {
+        $slug = $data['slug'] ?? Str::slug($data['name']);
+
+        if ($slug === '') {
+            $slug = Str::slug(Str::random(12));
+        }
+
+        return MeditationCategory::create([
+            'name' => $data['name'],
+            'slug' => $this->uniqueCategorySlug(
+                Str::limit($slug, 100, '')
+            ),
+            'description' => $data['description'] ?? null,
+            'sort_order' => $data['sort_order'] ?? 0,
+            'is_active' => $data['is_active'] ?? true,
+        ]);
+    }
+
+    public function createMeditation(array $data): Meditation
+    {
+        $meditation = Meditation::create(array_merge([
+            'category_id' => null,
+            'description' => null,
+            'audio_url' => null,
+            'background_audio_url' => null,
+            'background_type' => 'none',
+            'language' => 'en',
+            'status' => Meditation::STATUS_DESIGN,
+            'released_at' => null,
+            'version' => 1,
+            'source' => null,
+            'rights_holder' => null,
+            'license_type' => null,
+            'license_url' => null,
+            'license_status' => 'unaudited',
+            'attribution_required' => false,
+            'commercial_use_allowed' => false,
+        ], $data));
+
+        return $meditation->load('category');
+    }
+
+    private function uniqueCategorySlug(string $slug): string
+    {
+        $candidate = $slug;
+        $suffix = 2;
+
+        while (
+            MeditationCategory::where('slug', $candidate)->exists()
+        ) {
+            $candidate = Str::limit(
+                "{$slug}-{$suffix}",
+                100,
+                ''
+            );
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     public function home(User $user): array

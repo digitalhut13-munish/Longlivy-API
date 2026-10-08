@@ -373,4 +373,173 @@ class MeditationApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonStructure(['errors' => ['id']]);
     }
+
+    public function test_category_can_be_created(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Self Compassion',
+            'description' => 'Kindness toward oneself.',
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.category.name', 'Self Compassion')
+            ->assertJsonPath('data.category.slug', 'self-compassion')
+            ->assertJsonPath('data.category.description', 'Kindness toward oneself.');
+
+        $this->assertDatabaseHas('meditation_categories', [
+            'slug' => 'self-compassion',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $list = $this->getJson('/api/v1/meditation/categories')
+            ->assertStatus(200)
+            ->json('data.categories');
+
+        $this->assertTrue(
+            collect($list)->contains('slug', 'self-compassion')
+        );
+    }
+
+    public function test_category_auto_slug_avoids_duplicates(): void
+    {
+        $this->makeCategory(['name' => 'Focus', 'slug' => 'focus']);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Focus',
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.category.slug', 'focus-2');
+    }
+
+    public function test_category_validates_and_enforces_unique_slug(): void
+    {
+        $this->makeCategory();
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation/categories', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Duplicate',
+            'slug' => 'relaxation',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['slug']);
+
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Bad Slug',
+            'slug' => 'Bad Slug',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['slug']);
+    }
+
+    public function test_meditation_can_be_created(): void
+    {
+        $category = $this->makeCategory(['slug' => 'mindfulness']);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $response = $this->postJson('/api/v1/meditation', [
+            'title' => 'Loving Kindness',
+            'type' => 'guided',
+            'category_id' => $category->id,
+            'duration_minutes' => 12,
+            'audio_url' => 'https://audio.longlivy.example/meditations/loving-kindness.mp3',
+            'status' => 'published',
+            'language' => 'en',
+            'source' => 'Longlivy starter content',
+            'license_type' => 'proprietary',
+            'license_status' => 'released',
+            'commercial_use_allowed' => true,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.meditation.title', 'Loving Kindness')
+            ->assertJsonPath('data.meditation.type', 'guided')
+            ->assertJsonPath('data.meditation.duration_minutes', 12)
+            ->assertJsonPath('data.meditation.status', 'published')
+            ->assertJsonPath('data.meditation.category.slug', 'mindfulness')
+            ->assertJsonPath('data.meditation.license.license_status', 'released')
+            ->assertJsonPath('data.meditation.license.commercial_use_allowed', true);
+
+        $id = $response->json('data.meditation.id');
+
+        $this->assertDatabaseHas('meditations', [
+            'id' => $id,
+            'category_id' => $category->id,
+            'status' => 'published',
+        ]);
+
+        $catalog = $this->getJson('/api/v1/meditation')
+            ->assertStatus(200)
+            ->json('data.meditations');
+
+        $this->assertCount(1, $catalog);
+        $this->assertSame($id, $catalog[0]['id']);
+    }
+
+    public function test_created_meditation_applies_defaults_and_stays_draft(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $response = $this->postJson('/api/v1/meditation', [
+            'title' => 'Draft Piece',
+            'type' => 'free',
+            'duration_minutes' => 5,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.meditation.status', 'design')
+            ->assertJsonPath('data.meditation.background_type', 'none')
+            ->assertJsonPath('data.meditation.language', 'en')
+            ->assertJsonPath('data.meditation.version', 1)
+            ->assertJsonPath('data.meditation.license.license_status', 'unaudited')
+            ->assertJsonPath('data.meditation.license.attribution_required', false);
+
+        $id = $response->json('data.meditation.id');
+
+        $this->getJson('/api/v1/meditation/'.$id)
+            ->assertStatus(404);
+
+        $catalog = $this->getJson('/api/v1/meditation')
+            ->assertStatus(200)
+            ->json('data.meditations');
+
+        $this->assertCount(0, $catalog);
+    }
+
+    public function test_meditation_validates_type_category_and_urls(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'title',
+                'type',
+                'duration_minutes',
+            ]);
+
+        $this->postJson('/api/v1/meditation', [
+            'title' => 'Broken',
+            'type' => 'sleep',
+            'duration_minutes' => 0,
+            'category_id' => 999999,
+            'audio_url' => 'not-a-url',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'type',
+                'duration_minutes',
+                'category_id',
+                'audio_url',
+            ]);
+    }
 }

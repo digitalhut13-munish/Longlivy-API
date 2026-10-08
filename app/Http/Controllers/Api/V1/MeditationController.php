@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Meditation\StoreMeditationCategoryRequest;
+use App\Http\Requests\Api\V1\Meditation\StoreMeditationRequest;
 use App\Http\Resources\MeditationCategoryResource;
 use App\Http\Resources\MeditationReminderResource;
 use App\Http\Resources\MeditationResource;
@@ -32,6 +34,44 @@ class MeditationController extends Controller
                 ),
             ],
         ]);
+    }
+
+    /**
+     * Create a meditation category.
+     */
+    public function storeCategory(
+        StoreMeditationCategoryRequest $request
+    ): JsonResponse {
+        $category = $this->meditationService->createCategory(
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Meditation category created successfully.',
+            'data' => [
+                'category' => new MeditationCategoryResource($category),
+            ],
+        ], 201);
+    }
+
+    /**
+     * Create a meditation.
+     */
+    public function store(
+        StoreMeditationRequest $request
+    ): JsonResponse {
+        $meditation = $this->meditationService->createMeditation(
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Meditation created successfully.',
+            'data' => [
+                'meditation' => new MeditationResource($meditation),
+            ],
+        ], 201);
     }
 
     /**

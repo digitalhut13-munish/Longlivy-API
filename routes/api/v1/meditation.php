@@ -26,6 +26,11 @@ Route::get('/meditation/categories', [
     'categories',
 ]);
 
+Route::post('/meditation/categories', [
+    MeditationController::class,
+    'storeCategory',
+]);
+
 Route::get('/meditation/stats', [
     MeditationController::class,
     'stats',
@@ -139,6 +144,11 @@ Route::delete('/meditation/reminders/{reminder}', [
 Route::get('/meditation', [
     MeditationController::class,
     'index',
+]);
+
+Route::post('/meditation', [
+    MeditationController::class,
+    'store',
 ]);
 
 Route::get('/meditation/{meditation}', [
