@@ -22,6 +22,7 @@ class Goal extends Model
         'start_date',
         'end_date',
         'active',
+        'source',
     ];
 
     protected function casts(): array

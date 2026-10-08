@@ -32,6 +32,8 @@ class AuthController extends Controller
                 'current_weight' => $request->current_weight,
                 'weight_unit' => $request->weight_unit ?? 'kg',
                 'address' => $request->address,
+                'timezone' => $request->timezone ?? 'UTC',
+                'activity_level' => $request->activity_level ?? 'moderate',
             ]);
 
             return $user;

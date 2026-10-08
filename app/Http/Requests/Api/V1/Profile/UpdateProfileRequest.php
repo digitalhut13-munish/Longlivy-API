@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Api\V1\Auth;
+namespace App\Http\Requests\Api\V1\Profile;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterRequest extends FormRequest
+class UpdateProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,79 +15,80 @@ class RegisterRequest extends FormRequest
     {
         return [
             'first_name' => [
-                'required',
+                'sometimes',
                 'string',
                 'max:100',
             ],
 
             'last_name' => [
-                'required',
+                'sometimes',
                 'string',
                 'max:100',
             ],
 
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                'unique:users,email',
-            ],
-
-            'password' => [
-                'required',
-                'string',
-                'min:8',
-                'confirmed',
-            ],
-
             'date_of_birth' => [
+                'sometimes',
                 'nullable',
                 'date',
             ],
 
             'gender' => [
+                'sometimes',
                 'nullable',
                 'string',
                 'max:50',
             ],
 
             'height' => [
+                'sometimes',
                 'nullable',
                 'numeric',
                 'min:1',
             ],
 
             'height_unit' => [
+                'sometimes',
                 'nullable',
                 'in:cm,in',
             ],
 
             'current_weight' => [
+                'sometimes',
                 'nullable',
                 'numeric',
                 'min:1',
             ],
 
             'weight_unit' => [
+                'sometimes',
                 'nullable',
                 'in:kg,lb',
             ],
 
+            'body_fat_percentage' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:1',
+                'max:80',
+            ],
+
             'address' => [
+                'sometimes',
                 'nullable',
                 'string',
                 'max:1000',
             ],
 
             'timezone' => [
-                'nullable',
+                'sometimes',
                 'string',
                 'max:64',
                 'timezone',
             ],
 
             'activity_level' => [
-                'nullable',
+                'sometimes',
                 'string',
                 'in:sedentary,light,moderate,high,very_high',
             ],

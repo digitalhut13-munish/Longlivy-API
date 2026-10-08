@@ -26,6 +26,7 @@ class GoalResource extends JsonResource
             'end_date' => $this->end_date?->format('Y-m-d'),
 
             'active' => $this->active,
+            'source' => $this->source,
 
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
