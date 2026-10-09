@@ -33,6 +33,8 @@ class MealController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'meal_type' => ['nullable', 'string'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $meals = $this->mealService->getMeals(
@@ -44,7 +46,13 @@ class MealController extends Controller
             'success' => true,
             'message' => 'Meals retrieved successfully.',
             'data' => [
-                'meals' => MealResource::collection($meals),
+                'meals' => MealResource::collection($meals->items()),
+                'meta' => [
+                    'current_page' => $meals->currentPage(),
+                    'per_page' => $meals->perPage(),
+                    'total' => $meals->total(),
+                    'last_page' => $meals->lastPage(),
+                ],
             ],
         ]);
     }

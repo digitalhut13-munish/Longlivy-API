@@ -6,7 +6,7 @@ use App\Models\Fasting;
 use App\Models\User;
 use App\Services\Streak\StreakService;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class FastingService
@@ -19,7 +19,7 @@ class FastingService
     public function getUserFastings(
         User $user,
         array $filters = []
-    ): Collection {
+    ): LengthAwarePaginator {
         $query = $user->fastings()
             ->orderByDesc('started_at');
 
@@ -35,7 +35,9 @@ class FastingService
             $query->whereDate('date', '<=', $filters['to']);
         }
 
-        return $query->get();
+        $perPage = (int) ($filters['per_page'] ?? 50);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function getActive(User $user): ?Fasting
@@ -62,13 +64,36 @@ class FastingService
             : now();
 
         return $user->fastings()->create([
+            'fasting_plan_id' => $data['fasting_plan_id'] ?? null,
             'fasting_type' => $data['fasting_type'],
             'planned_hours' => $data['planned_hours'],
+            'planned_minutes' => $data['planned_minutes'] ?? null,
             'started_at' => $startedAt,
             'status' => Fasting::STATUS_ONGOING,
             'date' => $startedAt->toDateString(),
             'notes' => $data['notes'] ?? null,
         ]);
+    }
+
+    public function cancel(Fasting $fasting): Fasting
+    {
+        if (! $fasting->isOngoing()) {
+            throw ValidationException::withMessages([
+                'fasting' =>
+                    'This fasting session has already ended.',
+            ]);
+        }
+
+        $fasting->status = Fasting::STATUS_CANCELLED;
+        $fasting->ended_at = now();
+        $fasting->actual_hours = round(
+            $fasting->started_at
+                ->diffInSeconds($fasting->ended_at) / 3600,
+            2
+        );
+        $fasting->save();
+
+        return $fasting->fresh();
     }
 
     public function end(
@@ -119,6 +144,43 @@ class FastingService
         Fasting $fasting,
         array $data
     ): Fasting {
+        // #19a: "started_at" may be edited while the fast is ongoing.
+        // It must not be in the future and must stay before the
+        // (possibly updated) planned end.
+        if (array_key_exists('started_at', $data)) {
+            if (! $fasting->isOngoing()) {
+                throw ValidationException::withMessages([
+                    'started_at' =>
+                        'Only an ongoing fast can be moved.',
+                ]);
+            }
+
+            $newStart = Carbon::parse($data['started_at']);
+
+            if ($newStart->isFuture()) {
+                throw ValidationException::withMessages([
+                    'started_at' => 'Start time cannot be in the future.',
+                ]);
+            }
+
+            $plannedHours = $data['planned_hours']
+                ?? $fasting->planned_hours;
+            $plannedMinutes = $data['planned_minutes']
+                ?? $fasting->planned_minutes ?? 0;
+
+            $plannedEnd = $newStart->copy()
+                ->addHours($plannedHours)
+                ->addMinutes($plannedMinutes);
+
+            if ($newStart->greaterThanOrEqualTo($plannedEnd)) {
+                throw ValidationException::withMessages([
+                    'started_at' => 'Start time must be before the planned end.',
+                ]);
+            }
+
+            $data['date'] = $newStart->toDateString();
+        }
+
         $fasting->update($data);
 
         return $fasting->fresh();

@@ -11,8 +11,10 @@ class FastingResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'fasting_plan_id' => $this->fasting_plan_id,
             'fasting_type' => $this->fasting_type,
             'planned_hours' => $this->planned_hours,
+            'planned_minutes' => $this->planned_minutes,
 
             'status' => $this->status,
             'is_active' => $this->isOngoing(),

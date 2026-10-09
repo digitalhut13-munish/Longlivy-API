@@ -36,17 +36,17 @@ Route::get('/foods/barcode/{barcode}', [
 Route::get('/foods/{food}', [
     FoodController::class,
     'show',
-]);
+])->whereNumber('food');
 
 Route::put('/foods/{food}', [
     FoodController::class,
     'update',
-]);
+])->whereNumber('food');
 
 Route::delete('/foods/{food}', [
     FoodController::class,
     'destroy',
-]);
+])->whereNumber('food');
 
 /*
 |--------------------------------------------------------------------------
@@ -67,32 +67,32 @@ Route::post('/meals', [
 Route::get('/meals/{meal}', [
     MealController::class,
     'show',
-]);
+])->whereNumber('meal');
 
 Route::put('/meals/{meal}', [
     MealController::class,
     'update',
-]);
+])->whereNumber('meal');
 
 Route::delete('/meals/{meal}', [
     MealController::class,
     'destroy',
-]);
+])->whereNumber('meal');
 
 Route::post('/meals/{meal}/items', [
     MealController::class,
     'addItem',
-]);
+])->whereNumber('meal');
 
 Route::put('/meals/{meal}/items/{item}', [
     MealController::class,
     'updateItem',
-]);
+])->whereNumber('meal')->whereNumber('item');
 
 Route::delete('/meals/{meal}/items/{item}', [
     MealController::class,
     'deleteItem',
-]);
+])->whereNumber('meal')->whereNumber('item');
 
 /*
 |--------------------------------------------------------------------------
@@ -113,7 +113,7 @@ Route::post('/nutrition/log', [
 Route::post('/nutrition/recognize', [
     NutritionController::class,
     'recognize',
-]);
+])->middleware('throttle:nutrition.recognize');
 
 /*
 |--------------------------------------------------------------------------
@@ -134,17 +134,17 @@ Route::post('/recipes', [
 Route::get('/recipes/{recipe}', [
     RecipeController::class,
     'show',
-]);
+])->whereNumber('recipe');
 
 Route::put('/recipes/{recipe}', [
     RecipeController::class,
     'update',
-]);
+])->whereNumber('recipe');
 
 Route::delete('/recipes/{recipe}', [
     RecipeController::class,
     'destroy',
-]);
+])->whereNumber('recipe');
 
 /*
 |--------------------------------------------------------------------------
@@ -165,4 +165,4 @@ Route::post('/favorites', [
 Route::delete('/favorites/{favorite}', [
     FavoriteController::class,
     'destroy',
-]);
+])->whereNumber('favorite');

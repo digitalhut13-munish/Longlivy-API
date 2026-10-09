@@ -21,6 +21,16 @@ Route::prefix('auth')->group(function () {
         'login',
     ])->middleware('throttle:auth');
 
+    Route::post('/forgot-password', [
+        AuthController::class,
+        'forgotPassword',
+    ])->middleware('throttle:auth.forgot');
+
+    Route::post('/reset-password', [
+        AuthController::class,
+        'resetPassword',
+    ])->middleware('throttle:auth');
+
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/me', [
@@ -32,6 +42,21 @@ Route::prefix('auth')->group(function () {
             AuthController::class,
             'logout',
         ]);
+
+        Route::delete('/account', [
+            AuthController::class,
+            'deleteAccount',
+        ])->middleware('throttle:auth.delete');
+
+        Route::post('/email/resend', [
+            AuthController::class,
+            'resendVerificationCode',
+        ])->middleware('throttle:auth.verify');
+
+        Route::post('/email/verify', [
+            AuthController::class,
+            'verifyEmail',
+        ])->middleware('throttle:auth.verify');
 
     });
 

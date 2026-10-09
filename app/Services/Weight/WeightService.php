@@ -6,15 +6,17 @@ use App\Events\WeightLogged;
 use App\Models\User;
 use App\Models\WeightLog;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class WeightService
 {
     /**
      * @param  array<string, mixed>  $filters
      */
-    public function getLogs(User $user, array $filters = []): Collection
-    {
+    public function getLogs(
+        User $user,
+        array $filters = []
+    ): LengthAwarePaginator {
         $query = $user->weightLogs()->orderByDesc('logged_at');
 
         if (isset($filters['from']) && $filters['from'] !== null) {
@@ -25,11 +27,9 @@ class WeightService
             $query->whereDate('date', '<=', $filters['to']);
         }
 
-        if (isset($filters['limit']) && $filters['limit'] !== null) {
-            $query->limit((int) $filters['limit']);
-        }
+        $perPage = (int) ($filters['per_page'] ?? $filters['limit'] ?? 50);
 
-        return $query->get();
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function latest(User $user): ?WeightLog

@@ -310,10 +310,10 @@ class EnergyApiTest extends TestCase
         ])
             ->assertStatus(200);
 
-        // 10*80 + 6.25*180 - 5*30 - 161 = 1619
+        // 10*80 + 6.25*180 - 5*30 - 161 = 1614
         $this->getJson('/api/v1/energy/balance')
             ->assertStatus(200)
-            ->assertJsonPath('data.consumption.bmr', 1619.0);
+            ->assertJsonPath('data.consumption.bmr', 1614.0);
     }
 
     public function test_targets_require_a_complete_profile(): void

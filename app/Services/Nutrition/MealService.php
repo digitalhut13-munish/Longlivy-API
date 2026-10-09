@@ -8,7 +8,7 @@ use App\Models\Meal;
 use App\Models\MealItem;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class MealService
@@ -21,8 +21,10 @@ class MealService
     /**
      * @param  array<string, mixed>  $filters
      */
-    public function getMeals(User $user, array $filters = []): Collection
-    {
+    public function getMeals(
+        User $user,
+        array $filters = []
+    ): LengthAwarePaginator {
         $query = $user->meals()->with('items')->orderByDesc('logged_at');
 
         if (! empty($filters['date'])) {
@@ -41,7 +43,9 @@ class MealService
             $query->where('meal_type', $filters['meal_type']);
         }
 
-        return $query->get();
+        $perPage = (int) ($filters['per_page'] ?? 50);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**
@@ -51,16 +55,18 @@ class MealService
     {
         $timezone = $user->profile?->timezone() ?? 'UTC';
 
-        $loggedAt = isset($data['logged_at'])
-            ? Carbon::parse($data['logged_at'])->setTimezone($timezone)
-            : Carbon::now($timezone);
+        $loggedAt = $this->resolveLoggedAt($data, $timezone);
+
+        $mealDate = isset($data['date'])
+            ? Carbon::parse($data['date'])->toDateString()
+            : $loggedAt->copy()->setTimezone($timezone)->toDateString();
 
         $meal = new Meal([
             'user_id' => $user->id,
             'meal_type' => $data['meal_type'],
             'name' => $data['name'] ?? null,
             'logged_at' => $loggedAt,
-            'date' => $loggedAt->toDateString(),
+            'date' => $mealDate,
             'notes' => $data['notes'] ?? null,
             'source' => $data['source'] ?? 'manual',
         ]);
@@ -82,15 +88,20 @@ class MealService
     public function update(Meal $meal, array $data): Meal
     {
         $previousDate = $meal->date->toDateString();
+        $timezone = $meal->user->profile?->timezone() ?? 'UTC';
 
         if (isset($data['logged_at'])) {
-            $timezone = $meal->user->profile?->timezone() ?? 'UTC';
+            $data['logged_at'] = Carbon::parse(
+                $data['logged_at']
+            )->utc();
 
-            $loggedAt = Carbon::parse($data['logged_at'])
-                ->setTimezone($timezone);
-
-            $data['logged_at'] = $loggedAt;
-            $data['date'] = $loggedAt->toDateString();
+            // The day is derived in the profile's timezone from the
+            // same instant.
+            $data['date'] = Carbon::parse($data['logged_at'])
+                ->setTimezone($timezone)
+                ->toDateString();
+        } elseif (isset($data['date'])) {
+            $data['date'] = Carbon::parse($data['date'])->toDateString();
         }
 
         $meal->fill($data);
@@ -214,11 +225,9 @@ class MealService
     {
         $timezone = $user->profile?->timezone() ?? 'UTC';
 
-        $loggedAt = isset($data['logged_at'])
-            ? Carbon::parse($data['logged_at'])->setTimezone($timezone)
-            : Carbon::now($timezone);
+        $loggedAt = $this->resolveLoggedAt($data, $timezone);
 
-        $date = $loggedAt->toDateString();
+        $date = $loggedAt->copy()->setTimezone($timezone)->toDateString();
 
         $meal = $user->meals()
             ->whereDate('date', $date)
@@ -265,6 +274,27 @@ class MealService
         $meal->total_sodium = $items->sum('sodium');
 
         $meal->save();
+    }
+
+    /**
+     * The instant is always stored as UTC; the calendar date is derived
+     * separately in the user's profile timezone.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveLoggedAt(array $data, string $timezone): Carbon
+    {
+        if (isset($data['logged_at'])) {
+            return Carbon::parse($data['logged_at'])->utc();
+        }
+
+        if (isset($data['date'])) {
+            return Carbon::parse($data['date'], $timezone)
+                ->startOfDay()
+                ->utc();
+        }
+
+        return Carbon::now($timezone)->utc();
     }
 
     /**

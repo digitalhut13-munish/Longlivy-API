@@ -240,7 +240,7 @@ class MeditationApiTest extends TestCase
             ->assertJsonPath('data.today.sessions', 1)
             ->assertJsonPath('data.today.meditated', true)
             ->assertJsonPath('data.week.count', 1)
-            ->assertJsonPath('data.week.target', 5)
+            ->assertJsonPath('data.week.target', 5.0)
             ->assertJsonPath('data.streak.current', 3)
             ->assertJsonPath('data.streak.longest', 5)
             ->assertJsonPath('data.shortcuts.guided', 2)

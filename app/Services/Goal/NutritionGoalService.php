@@ -41,12 +41,21 @@ class NutritionGoalService
      * Calculate and store the daily nutrition targets.
      *
      * @param  string  $direction  maintain | lose | gain
+     * @param  float|null  $weeklyChangeKg  weekly pace (0.25-1.0 kg/week);
+     *                             overrides the fixed kcal adjustment with
+     *                             weekly_change_kg * 7700 / 7 per day
+     * @param  bool  $overwriteManual  when set, manual targets are
+     *                             replaced instead of being skipped
      * @return array<string, mixed>
      *
      * @throws ValidationException when the profile is incomplete.
      */
-    public function calculate(User $user, string $direction = 'maintain'): array
-    {
+    public function calculate(
+        User $user,
+        string $direction = 'maintain',
+        ?float $weeklyChangeKg = null,
+        bool $overwriteManual = false
+    ): array {
         $missing = $this->engine->missingInputs($user);
 
         if ($missing !== []) {
@@ -58,9 +67,19 @@ class NutritionGoalService
 
         $tdee = (float) $this->engine->tdee($user);
 
+        if ($weeklyChangeKg !== null && $weeklyChangeKg > 0) {
+            $delta = round($weeklyChangeKg * 7700 / 7);
+        } else {
+            $delta = match ($direction) {
+                'lose' => (int) config('longlivy.calorie.deficit'),
+                'gain' => (int) config('longlivy.calorie.surplus'),
+                default => 0,
+            };
+        }
+
         $adjustment = match ($direction) {
-            'lose' => -(int) config('longlivy.calorie.deficit'),
-            'gain' => (int) config('longlivy.calorie.surplus'),
+            'lose' => -abs($delta),
+            'gain' => abs($delta),
             default => 0,
         };
 
@@ -89,7 +108,8 @@ class NutritionGoalService
                 $user,
                 $goalType,
                 (float) $computed['value'],
-                $computed['unit']
+                $computed['unit'],
+                $overwriteManual
             );
         }
 
@@ -111,13 +131,15 @@ class NutritionGoalService
     }
 
     /**
+     * @param  bool  $overwriteManual
      * @return array<string, mixed>
      */
     private function store(
         User $user,
         string $goalType,
         float $value,
-        string $unit
+        string $unit,
+        bool $overwriteManual = false
     ): array {
         $existing = Goal::where('user_id', $user->id)
             ->where('goal_type', $goalType)
@@ -126,14 +148,19 @@ class NutritionGoalService
             ->orderByDesc('id')
             ->first();
 
-        if ($existing !== null && $existing->source === 'manual') {
+        if ($existing !== null
+            && $existing->source === 'manual'
+            && ! $overwriteManual
+        ) {
             return [
                 'goal_type' => $goalType,
-                'value' => (float) $existing->target_value,
+                'value' => $this->normalizeValue(
+                    (float) $existing->target_value
+                ),
                 'unit' => $existing->unit,
                 'source' => 'manual',
                 'updated' => false,
-                'reason' => 'A manually set target is never overwritten.',
+                'reason' => 'manual_override',
             ];
         }
 
@@ -159,11 +186,24 @@ class NutritionGoalService
 
         return [
             'goal_type' => $goalType,
-            'value' => $value,
+            'value' => $this->normalizeValue($value),
             'unit' => $unit,
             'source' => 'longlivy_calculated',
             'updated' => true,
             'reason' => null,
         ];
+    }
+
+    /**
+     * Whole values are emitted as integers so consumers and contract
+     * tests comparing 'value' run against a stable JSON number.
+     */
+    private function normalizeValue(float $value): int|float
+    {
+        if ($value == floor($value)) {
+            return (int) $value;
+        }
+
+        return round($value, 2);
     }
 }

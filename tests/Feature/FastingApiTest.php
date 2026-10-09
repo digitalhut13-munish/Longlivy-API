@@ -76,7 +76,7 @@ class FastingApiTest extends TestCase
         $end
             ->assertStatus(200)
             ->assertJsonPath('data.fasting.status', Fasting::STATUS_COMPLETED)
-            ->assertJsonPath('data.fasting.progress_percent', 100);
+            ->assertJsonPath('data.fasting.progress_percent', 100.0);
 
         $this->assertDatabaseHas('user_streaks', [
             'user_id' => $user->id,

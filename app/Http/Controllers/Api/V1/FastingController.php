@@ -28,10 +28,17 @@ class FastingController extends Controller
             'status' => [
                 'sometimes',
                 'string',
-                'in:ongoing,completed,failed',
+                'in:ongoing,completed,failed,cancelled',
             ],
             'from' => ['sometimes', 'date'],
             'to' => ['sometimes', 'date'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => [
+                'sometimes',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
         ]);
 
         $fastings = $this->fastingService->getUserFastings(
@@ -43,7 +50,15 @@ class FastingController extends Controller
             'success' => true,
             'message' => 'Fasting sessions retrieved successfully.',
             'data' => [
-                'fastings' => FastingResource::collection($fastings),
+                'fastings' => FastingResource::collection(
+                    $fastings->items()
+                ),
+                'meta' => [
+                    'current_page' => $fastings->currentPage(),
+                    'per_page' => $fastings->perPage(),
+                    'total' => $fastings->total(),
+                    'last_page' => $fastings->lastPage(),
+                ],
             ],
         ]);
     }
@@ -182,6 +197,26 @@ class FastingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Fasting session ended successfully.',
+            'data' => [
+                'fasting' => new FastingResource($fasting),
+            ],
+        ]);
+    }
+
+    /**
+     * Cancel a fasting session, keeping the record.
+     */
+    public function cancel(
+        Request $request,
+        Fasting $fasting
+    ): JsonResponse {
+        $this->authorize('update', $fasting);
+
+        $fasting = $this->fastingService->cancel($fasting);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fasting session cancelled.',
             'data' => [
                 'fasting' => new FastingResource($fasting),
             ],

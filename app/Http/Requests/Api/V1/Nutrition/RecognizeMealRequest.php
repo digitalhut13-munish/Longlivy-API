@@ -15,9 +15,16 @@ class RecognizeMealRequest extends FormRequest
     {
         return [
             'type' => ['required', 'in:photo,voice,text'],
-            'text' => ['nullable', 'string', 'max:5000'],
-            'image_base64' => ['nullable', 'string', 'max:10000000'],
+            'text' => ['nullable', 'string', 'max:1000'],
             'meal_type' => ['nullable', 'string', 'max:30'],
+            'locale' => ['nullable', 'string', 'max:10'],
+            'image' => [
+                'required_if:type,photo',
+                'image',
+                'mimes:jpeg,png,heic',
+                'max:8192',
+            ],
+            'image_base64' => ['nullable', 'string', 'max:12000000'],
         ];
     }
 }

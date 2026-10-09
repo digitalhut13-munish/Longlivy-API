@@ -2,6 +2,7 @@
 
 namespace App\Services\Energy;
 
+use App\Models\Activity;
 use App\Models\DailyEnergyBalance;
 use App\Models\EnergyExpenditure;
 use App\Models\Goal;
@@ -162,6 +163,76 @@ class EnergyBalanceService
                 ]
             );
         }
+    }
+
+    /**
+     * Store one activity's calories in the expenditure projection so
+     * the daily balance reflects sport/manual/imported work, then
+     * refresh the covering day.
+     */
+    public function syncActivity(
+        User $user,
+        Activity $activity
+    ): void {
+        $date = $this->activityDate($user, $activity);
+
+        if ($activity->started_at === null) {
+            return;
+        }
+
+        EnergyExpenditure::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'date' => $date,
+                'component' => $activity->componentForBalance(),
+                'source' => 'activity',
+                'external_id' => $activity->client_id,
+            ],
+            [
+                'calories' => $activity->calories_kcal,
+                'calculation_method' => $activity->calculation_method,
+                'calculation_version' => '1.0',
+                'provider' => 'longlivy_activity',
+                'calculated_at' => now(),
+                'meta' => [
+                    'type' => $activity->type,
+                    'started_at' => $activity->started_at->toIso8601String(),
+                    'duration_seconds' => $activity->active_seconds,
+                ],
+            ]
+        );
+
+        $this->recompute($user, $date);
+    }
+
+    /**
+     * Remove an activity's calories from the projection.
+     */
+    public function removeActivity(
+        User $user,
+        Activity $activity
+    ): void {
+        $date = $this->activityDate($user, $activity);
+
+        EnergyExpenditure::where('user_id', $user->id)
+            ->where('date', $date)
+            ->where('component', $activity->componentForBalance())
+            ->where('source', 'activity')
+            ->where('external_id', $activity->client_id)
+            ->delete();
+
+        $this->recompute($user, $date);
+    }
+
+    private function activityDate(
+        User $user,
+        Activity $activity
+    ): string {
+        $timezone = $user->profile?->timezone() ?? 'UTC';
+
+        return $activity->started_at
+            ->setTimezone($timezone)
+            ->toDateString();
     }
 
     /**

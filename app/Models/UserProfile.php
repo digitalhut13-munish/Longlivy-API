@@ -21,13 +21,24 @@ class UserProfile extends Model
         'timezone',
         'activity_level',
         'body_fat_percentage',
+        'goal',
+        'weight_change_pace_kg_per_week',
+        'training_frequency',
+        'training_volume',
+        'preferred_fasting_method',
+        'micronutrient_focus',
+        'avatar_id',
+        'language',
     ];
 
     protected $casts = [
-        'date_of_birth' => 'date',
+        'date_of_birth' => 'date:Y-m-d',
         'height' => 'decimal:2',
         'current_weight' => 'decimal:2',
         'body_fat_percentage' => 'decimal:2',
+        'weight_change_pace_kg_per_week' => 'decimal:2',
+        'training_frequency' => 'integer',
+        'micronutrient_focus' => 'array',
     ];
 
     /**
@@ -46,7 +57,9 @@ class UserProfile extends Model
 
     public function timezone(): string
     {
-        return $this->timezone ?: 'UTC';
+        return ! empty($this->attributes['timezone'])
+            ? $this->attributes['timezone']
+            : 'UTC';
     }
 
     public function user(): BelongsTo

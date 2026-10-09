@@ -44,7 +44,7 @@ class EnergyExpenditure extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'calories' => 'decimal:2',
         'calculated_at' => 'datetime',
         'meta' => 'array',

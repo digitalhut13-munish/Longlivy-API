@@ -11,6 +11,17 @@ class Goal extends Model
 {
     use HasFactory;
 
+    /**
+     * Newly created goals are active by default and, unless created
+     * by the target calculator, recorded as manually sourced.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'active' => true,
+        'source' => 'manual',
+    ];
+
     protected $fillable = [
         'user_id',
         'goal_type',

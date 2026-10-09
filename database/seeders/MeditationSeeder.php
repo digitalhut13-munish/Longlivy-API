@@ -9,8 +9,9 @@ use Illuminate\Database\Seeder;
 class MeditationSeeder extends Seeder
 {
     /**
-     * Starter meditation catalog. Audio files are referenced by URL so
-     * the app streams them; only content whose licence permits
+     * Starter meditation catalog. Audio is stored per language in the
+     * meditation_audio table so the catalog can serve streamable URLs
+     * (see requirement #6). Only content whose licence permits
      * commercial use may be published in production (licence fields
      * are stored per content object for that check).
      *
@@ -86,6 +87,13 @@ class MeditationSeeder extends Seeder
             'category' => 'breathing-meditation',
             'duration_minutes' => 5,
             'description' => 'Equal counts of inhale, hold, exhale and hold.',
+            'breathing_pattern' => [
+                'inhale_seconds' => 4,
+                'hold_seconds' => 4,
+                'exhale_seconds' => 4,
+                'second_hold_seconds' => 4,
+                'repetitions' => 8,
+            ],
         ],
         [
             'title' => '4-7-8 Breathing',
@@ -93,12 +101,34 @@ class MeditationSeeder extends Seeder
             'category' => 'breathing-meditation',
             'duration_minutes' => 7,
             'description' => 'A long exhale breathing pattern for deep calm.',
+            'breathing_pattern' => [
+                'inhale_seconds' => 4,
+                'hold_seconds' => 7,
+                'exhale_seconds' => 8,
+                'second_hold_seconds' => 0,
+                'repetitions' => 8,
+            ],
+        ],
+        [
+            'title' => 'Nadi Shodhana',
+            'type' => 'breathing',
+            'category' => 'breathing-meditation',
+            'duration_minutes' => 5,
+            'description' => 'Alternate nostril breathing to balance the mind.',
+            'breathing_pattern' => [
+                'inhale_seconds' => 4,
+                'hold_seconds' => 0,
+                'exhale_seconds' => 4,
+                'second_hold_seconds' => 0,
+                'repetitions' => 10,
+            ],
         ],
         [
             'title' => 'Quiet Sitting',
             'type' => 'free',
             'category' => null,
             'duration_minutes' => 10,
+            'sound_category' => 'ambient',
             'description' => 'Unstructured sitting with optional interval bells.',
         ],
         [
@@ -106,7 +136,16 @@ class MeditationSeeder extends Seeder
             'type' => 'free',
             'category' => null,
             'duration_minutes' => 15,
+            'sound_category' => 'nature',
             'description' => 'Sit with whatever arises, without guidance.',
+        ],
+        [
+            'title' => 'Sound Bath',
+            'type' => 'free',
+            'category' => null,
+            'duration_minutes' => 20,
+            'sound_category' => 'meditation_music',
+            'description' => 'Soft instrumental beds for an unguided practice.',
         ],
         [
             'title' => 'Your Own Meditation',
@@ -127,7 +166,7 @@ class MeditationSeeder extends Seeder
                 )->first()
                 : null;
 
-            Meditation::updateOrCreate(
+            $record = Meditation::updateOrCreate(
                 [
                     'title' => $meditation['title'],
                 ],
@@ -136,7 +175,18 @@ class MeditationSeeder extends Seeder
                     'type' => $meditation['type'],
                     'description' => $meditation['description'],
                     'duration_minutes' => $meditation['duration_minutes'],
-                    'audio_url' => $this->audioUrl($meditation['title']),
+                    'duration_seconds' => $meditation['duration_minutes'] * 60,
+                    'sound_category' => $meditation['sound_category'] ?? null,
+                    'thumbnail_path' => $this->thumbnailUrl(
+                        $meditation['title']
+                    ),
+                    'availability' => Meditation::AVAILABILITY_AVAILABLE,
+                    'is_premium' => false,
+                    'breathing_pattern' => $meditation['breathing_pattern'] ?? null,
+                    'audio_url' => $this->audioUrl(
+                        $meditation['title'],
+                        'en'
+                    ),
                     'background_audio_url' => null,
                     'background_type' => 'none',
                     'language' => 'en',
@@ -152,13 +202,37 @@ class MeditationSeeder extends Seeder
                     'commercial_use_allowed' => true,
                 ]
             );
+
+            foreach (['en', 'de'] as $language) {
+                $record->audio()->updateOrCreate(
+                    ['language' => $language],
+                    [
+                        'storage_path' => $this->audioUrl(
+                            $meditation['title'],
+                            $language
+                        ),
+                        'format' => 'mp3',
+                        'mime_type' => 'audio/mpeg',
+                        'bitrate_kbps' => 128,
+                        'duration_seconds' => $meditation['duration_minutes'] * 60,
+                        'size_bytes' => $meditation['duration_minutes'] * 60 * 16000,
+                    ]
+                );
+            }
         }
     }
 
-    private function audioUrl(string $title): string
+    private function thumbnailUrl(string $title): string
     {
         $slug = strtolower(str_replace(' ', '-', $title));
 
-        return "https://audio.longlivy.example/meditations/{$slug}.mp3";
+        return "https://cdn.longlivy.example/meditations/{$slug}/thumb@2x.jpg";
+    }
+
+    private function audioUrl(string $title, string $language): string
+    {
+        $slug = strtolower(str_replace(' ', '-', $title));
+
+        return "https://audio.longlivy.example/meditations/{$slug}_{$language}.mp3";
     }
 }

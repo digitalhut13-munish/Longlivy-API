@@ -9,6 +9,7 @@ use App\Http\Resources\MeditationCategoryResource;
 use App\Http\Resources\MeditationReminderResource;
 use App\Http\Resources\MeditationResource;
 use App\Services\Meditation\MeditationService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -85,17 +86,28 @@ class MeditationController extends Controller
             'language' => ['sometimes', 'string', 'max:10'],
             'max_duration' => ['sometimes', 'integer', 'min:1'],
             'q' => ['sometimes', 'string', 'max:191'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $meditations = $this->meditationService->catalog($filters);
+        $meditations = $this->meditationService->catalog(
+            $request->user(),
+            $filters
+        );
 
         return response()->json([
             'success' => true,
             'message' => 'Meditations retrieved successfully.',
             'data' => [
                 'meditations' => MeditationResource::collection(
-                    $meditations
+                    $meditations->items()
                 ),
+                'meta' => [
+                    'current_page' => $meditations->currentPage(),
+                    'per_page' => $meditations->perPage(),
+                    'total' => $meditations->total(),
+                    'last_page' => $meditations->lastPage(),
+                ],
             ],
         ]);
     }
@@ -142,9 +154,19 @@ class MeditationController extends Controller
     /**
      * Get a published meditation.
      */
-    public function show(int $meditation): JsonResponse
+    public function show(Request $request, int $meditation): JsonResponse
     {
-        $meditation = $this->meditationService->find($meditation);
+        try {
+            $meditation = $this->meditationService->find(
+                $meditation,
+                $request->user()
+            );
+        } catch (ModelNotFoundException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Meditation not found.',
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,

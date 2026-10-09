@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Goal\GoalService;
 use App\Services\Streak\StreakService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 class MeditationService
@@ -38,11 +39,14 @@ class MeditationService
             ->get();
     }
 
-    public function catalog(array $filters = []): Collection
-    {
+    public function catalog(
+        ?User $user = null,
+        array $filters = []
+    ): LengthAwarePaginator {
         $query = Meditation::query()
             ->where('status', Meditation::STATUS_PUBLISHED)
-            ->with('category');
+            ->with('category', 'audio')
+            ->with($this->favoriteScope($user));
 
         if (! empty($filters['type'])) {
             $query->where('type', $filters['type']);
@@ -76,15 +80,30 @@ class MeditationService
         return $query
             ->orderByDesc('released_at')
             ->orderBy('title')
-            ->get();
+            ->paginate(
+                (int) ($filters['per_page'] ?? 50)
+            )
+            ->withQueryString();
     }
 
-    public function find(int $id): Meditation
+    public function find(int $id, ?User $user = null): Meditation
     {
         return Meditation::where('id', $id)
             ->where('status', Meditation::STATUS_PUBLISHED)
-            ->with('category')
+            ->with('category', 'audio')
+            ->with($this->favoriteScope($user))
             ->firstOrFail();
+    }
+
+    private function favoriteScope(?User $user): array
+    {
+        if ($user === null) {
+            return ['favorites' => fn ($query) => $query->whereRaw('1 = 0')];
+        }
+
+        return [
+            'favorites' => fn ($query) => $query->where('user_id', $user->id),
+        ];
     }
 
     public function createCategory(array $data): MeditationCategory

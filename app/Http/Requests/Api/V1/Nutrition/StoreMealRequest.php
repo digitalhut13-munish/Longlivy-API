@@ -19,6 +19,7 @@ class StoreMealRequest extends FormRequest
             'meal_type' => ['required', 'string', 'in:'.implode(',', Meal::types())],
             'name' => ['nullable', 'string', 'max:191'],
             'logged_at' => ['nullable', 'date'],
+            'date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'items' => ['sometimes', 'array'],
             'items.*.food_id' => ['nullable', 'integer'],

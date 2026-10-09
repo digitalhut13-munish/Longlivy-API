@@ -7,7 +7,7 @@ use App\Models\MeditationSession;
 use App\Models\User;
 use App\Services\Streak\StreakService;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class SessionService
@@ -19,7 +19,7 @@ class SessionService
     public function getUserSessions(
         User $user,
         array $filters = []
-    ): Collection {
+    ): LengthAwarePaginator {
         $query = $user->meditationSessions()
             ->with('meditation')
             ->orderByDesc('started_at');
@@ -40,7 +40,9 @@ class SessionService
             $query->whereDate('date', '<=', $filters['to']);
         }
 
-        return $query->get();
+        $perPage = (int) ($filters['per_page'] ?? 50);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function getActive(User $user): ?MeditationSession
@@ -134,7 +136,9 @@ class SessionService
 
     public function complete(
         MeditationSession $session,
-        ?Carbon $endedAt = null
+        ?Carbon $endedAt = null,
+        ?int $clientActiveSeconds = null,
+        ?int $clientPausedSeconds = null
     ): MeditationSession {
         if (! $session->isRunning()) {
             throw ValidationException::withMessages([
@@ -152,25 +156,80 @@ class SessionService
 
         $elapsed = $session->started_at->diffInSeconds($endedAt);
 
-        $paused = $session->paused_seconds;
+        $usesClient = $clientActiveSeconds !== null
+            || $clientPausedSeconds !== null;
 
-        if ($session->isPaused()
-            && $session->paused_at !== null
-            && $session->paused_at->lessThan($endedAt)) {
-            $paused += $session->paused_at->diffInSeconds($endedAt);
+        if ($clientActiveSeconds !== null) {
+            if ($clientActiveSeconds < 0
+                || $clientActiveSeconds > $elapsed) {
+                throw ValidationException::withMessages([
+                    'active_seconds' => 'Active time cannot exceed the '
+                        .'elapsed session time.',
+                ]);
+            }
+
+            $activeSeconds = $clientActiveSeconds;
+            $pausedSeconds = $clientPausedSeconds ?? 0;
+        } elseif ($clientPausedSeconds !== null) {
+            $pausedSeconds = max(0, $clientPausedSeconds);
+            $activeSeconds = max(0, $elapsed - $pausedSeconds);
+        } else {
+            $pausedSeconds = $session->paused_seconds;
+
+            if ($session->isPaused()
+                && $session->paused_at !== null
+                && $session->paused_at->lessThan($endedAt)) {
+                $pausedSeconds += $session->paused_at->diffInSeconds($endedAt);
+            }
+
+            $activeSeconds = max(0, $elapsed - $pausedSeconds);
         }
-
-        $activeSeconds = max(0, $elapsed - $paused);
 
         $session->status = MeditationSession::STATUS_COMPLETED;
         $session->ended_at = $endedAt;
         $session->paused_at = null;
-        $session->paused_seconds = $paused;
-        $session->actual_minutes = (int) ceil($activeSeconds / 60);
+        $session->paused_seconds = $pausedSeconds;
+        $session->active_seconds = $activeSeconds;
+        $session->actual_minutes = $usesClient
+            ? intdiv($activeSeconds, 60)
+            : (int) ceil($activeSeconds / 60);
         $session->save();
 
         $this->syncStreak($session);
         $this->syncGoals($session);
+
+        return $session->fresh();
+    }
+
+    /**
+     * Store playback progress reported by the client. Updates that
+     * arrive with an older client_timestamp than the last stored one
+     * are ignored so out-of-order heartbeats cannot rewind a session.
+     */
+    public function saveProgress(
+        MeditationSession $session,
+        array $data
+    ): MeditationSession {
+        if (! $session->isRunning()) {
+            throw ValidationException::withMessages([
+                'session' => 'This meditation session is not running.',
+            ]);
+        }
+
+        $clientTimestamp = Carbon::parse($data['client_timestamp']);
+
+        if ($session->progress_updated_at !== null
+            && $clientTimestamp->lessThanOrEqualTo(
+                $session->progress_updated_at
+            )) {
+            return $session;
+        }
+
+        $session->position_seconds = (int) $data['position_seconds'];
+        $session->active_seconds = (int) $data['active_seconds'];
+        $session->paused_seconds = (int) $data['paused_seconds'];
+        $session->progress_updated_at = $clientTimestamp;
+        $session->save();
 
         return $session->fresh();
     }

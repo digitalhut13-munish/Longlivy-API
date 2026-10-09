@@ -7,7 +7,7 @@ use App\Models\Food;
 use App\Models\Meal;
 use App\Models\Meditation;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class FavoriteService
@@ -21,8 +21,14 @@ class FavoriteService
         Favorite::TYPE_MEDITATION => Meditation::class,
     ];
 
-    public function list(User $user, ?string $type = null): Collection
-    {
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function list(
+        User $user,
+        ?string $type = null,
+        array $filters = []
+    ): LengthAwarePaginator {
         $query = $user->favorites()
             ->with('favoritable')
             ->orderByDesc('created_at');
@@ -31,7 +37,9 @@ class FavoriteService
             $query->where('favoritable_type', $this->morphType($type));
         }
 
-        return $query->get();
+        $perPage = (int) ($filters['per_page'] ?? 50);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function add(User $user, string $type, int $id): Favorite

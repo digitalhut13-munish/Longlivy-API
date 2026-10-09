@@ -27,6 +27,8 @@ class WeightLogController extends Controller
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $logs = $this->weightService->getLogs(
@@ -38,7 +40,15 @@ class WeightLogController extends Controller
             'success' => true,
             'message' => 'Weight entries retrieved successfully.',
             'data' => [
-                'weight_logs' => WeightLogResource::collection($logs),
+                'weight_logs' => WeightLogResource::collection(
+                    $logs->items()
+                ),
+                'meta' => [
+                    'current_page' => $logs->currentPage(),
+                    'per_page' => $logs->perPage(),
+                    'total' => $logs->total(),
+                    'last_page' => $logs->lastPage(),
+                ],
             ],
         ]);
     }

@@ -5,17 +5,41 @@ namespace App\Services\Nutrition;
 use App\Models\Food;
 use App\Models\FoodCategory;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class FoodService
 {
-    public function search(User $user, array $filters = []): Collection
-    {
-        $query = Food::query()
-            ->where(function ($builder) use ($user) {
+    /**
+     * Search the shared catalog plus the user's own foods.
+     *
+     * The scope decides which rows are visible:
+     *   all     -> catalog foods and the user's own foods
+     *   catalog -> shared catalog rows only (user_id NULL)
+     *   mine    -> only foods the user created themselves
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function search(
+        User $user,
+        array $filters = []
+    ): LengthAwarePaginator {
+        $query = Food::query();
+
+        $scope = $filters['scope'] ?? 'all';
+        $scope = ! empty($filters['mine']) ? 'mine' : $scope;
+
+        if ($scope === 'mine') {
+            $query->where('user_id', $user->id)
+                ->where('is_custom', true);
+        } elseif ($scope === 'catalog') {
+            $query->where('is_custom', false)
+                ->whereNull('user_id');
+        } else {
+            $query->where(function ($builder) use ($user) {
                 $builder->where('is_custom', false)
                     ->orWhere('user_id', $user->id);
             });
+        }
 
         if (! empty($filters['q'])) {
             $term = '%'.$filters['q'].'%';
@@ -34,13 +58,18 @@ class FoodService
             $query->where('category_id', $filters['category_id']);
         }
 
-        if (! empty($filters['barcode'])) {
-            $query->where('barcode', $filters['barcode']);
+        if (! empty($filters['category'])) {
+            $query->whereHas(
+                'category',
+                function ($builder) use ($filters) {
+                    $builder->where('name', $filters['category'])
+                        ->orWhere('slug', $filters['category']);
+                }
+            );
         }
 
-        if (! empty($filters['mine'])) {
-            $query->where('user_id', $user->id)
-                ->where('is_custom', true);
+        if (! empty($filters['barcode'])) {
+            $query->where('barcode', $filters['barcode']);
         }
 
         $sort = $filters['sort'] ?? 'relevance';
@@ -64,9 +93,13 @@ class FoodService
             $query->orderByDesc('created_at');
         }
 
+        // The user's own foods rank above the shared catalog.
+        $query->orderByDesc('is_custom');
         $query->orderBy('name');
 
-        return $query->limit($filters['limit'] ?? 50)->get();
+        $perPage = (int) ($filters['per_page'] ?? $filters['limit'] ?? 50);
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     public function categories()
@@ -117,6 +150,39 @@ class FoodService
             })
             ->orderByRaw('CASE WHEN user_id IS NULL THEN 1 ELSE 0 END')
             ->first();
+    }
+
+    /**
+     * Cache a product resolved from an external database as a shared
+     * catalog food (user_id NULL). Idempotent per barcode so scanning
+     * the same code twice never duplicates the row.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function findOrCreateCatalog(array $data): Food
+    {
+        $barcode = $data['barcode'] ?? null;
+        $source = $data['source'] ?? 'catalog';
+
+        $existing = Food::where('user_id', null)
+            ->where('barcode', $barcode)
+            ->where('source', $source)
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $food = new Food($data);
+
+        $food->user_id = null;
+        $food->is_custom = false;
+        $food->verified = true;
+        $food->source = $source;
+
+        $food->save();
+
+        return $food;
     }
 
     public function findForUser(User $user, int $foodId): ?Food

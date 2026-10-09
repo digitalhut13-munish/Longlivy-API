@@ -36,7 +36,7 @@ class UpdateProfileRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'max:50',
+                'in:female,male,diverse',
             ],
 
             'height' => [
@@ -91,6 +91,69 @@ class UpdateProfileRequest extends FormRequest
                 'sometimes',
                 'string',
                 'in:sedentary,light,moderate,high,very_high',
+            ],
+
+            'goal' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'in:weight_loss,maintenance,general_wellness,muscle_gain',
+            ],
+
+            'weight_change_pace_kg_per_week' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:0.1',
+                'max:1.0',
+            ],
+
+            'training_frequency' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:0',
+                'max:14',
+            ],
+
+            'training_volume' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'in:low,moderate,high',
+            ],
+
+            'preferred_fasting_method' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
+            'micronutrient_focus' => [
+                'sometimes',
+                'nullable',
+                'array',
+                'max:50',
+            ],
+
+            'micronutrient_focus.*' => [
+                'string',
+                'max:50',
+            ],
+
+            'avatar_id' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:191',
+            ],
+
+            'language' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'in:en,de',
             ],
         ];
     }

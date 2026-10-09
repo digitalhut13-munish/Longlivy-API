@@ -16,10 +16,29 @@ class Fasting extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const FASTING_TYPES = [
+        '14:10',
+        '16:8',
+        '18:6',
+        '20:4',
+        '24h',
+        '36h',
+        '48h',
+        '72h',
+        '96h',
+        'individual',
+    ];
+
+    public const MAX_PLANNED_HOURS = 96;
+
     protected $fillable = [
         'user_id',
+        'fasting_plan_id',
         'fasting_type',
         'planned_hours',
+        'planned_minutes',
         'started_at',
         'ended_at',
         'actual_hours',
@@ -32,16 +51,29 @@ class Fasting extends Model
     {
         return [
             'planned_hours' => 'integer',
+            'planned_minutes' => 'integer',
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
-            'actual_hours' => 'decimal:2',
-            'date' => 'date',
+            'actual_hours' => 'float',
+            'date' => 'date:Y-m-d',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(FastingPlan::class, 'fasting_plan_id');
+    }
+
+    public function plannedEnd(): \Illuminate\Support\Carbon
+    {
+        return $this->started_at->copy()
+            ->addHours($this->planned_hours)
+            ->addMinutes($this->planned_minutes ?? 0);
     }
 
     public function isOngoing(): bool

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 class MeditationReminderResource extends JsonResource
 {
@@ -11,7 +12,7 @@ class MeditationReminderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'time' => $this->time,
+            'time' => Carbon::parse($this->time)->format('H:i'),
             'days_of_week' => $this->days_of_week,
             'days' => array_map(
                 'intval',

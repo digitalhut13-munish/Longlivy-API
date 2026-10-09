@@ -29,6 +29,11 @@ class MeditationSessionResource extends JsonResource
             'ended_at' => $this->ended_at?->toISOString(),
             'paused_at' => $this->paused_at?->toISOString(),
 
+            'position_seconds' => $this->position_seconds,
+            'active_seconds' => $this->active_seconds,
+            'paused_seconds' => $this->paused_seconds,
+            'progress_updated_at' => $this->progress_updated_at?->toISOString(),
+
             'date' => $this->date?->format('Y-m-d'),
 
             'elapsed_seconds' => $this->elapsedSeconds(),

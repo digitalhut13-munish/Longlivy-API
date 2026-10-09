@@ -87,6 +87,7 @@ class NutritionController extends Controller
         RecognizeMealRequest $request
     ): JsonResponse {
         $data = $request->validated();
+        $data['user'] = $request->user();
 
         $draft = $this->recognition->recognize($data['type'], $data);
 

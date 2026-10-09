@@ -40,6 +40,21 @@ return [
     | Share of daily calories used when the macro targets are calculated
     | automatically. Fiber is a fixed gram target.
     |
+    | POST /energy/targets/calculate creates one goal per target, stored
+    | in the goals module with period "day" and source
+    | "longlivy_calculated":
+    |   nutrition_calories  kcal    TDEE + adjustment (Mifflin-St Jeor TDEE
+    |                              via the activity factor; adjustment -500 /
+    |                              0 / +500 kcal, or weekly_change_kg *
+    |                              7700 / 7 when a pace is given)
+    |   nutrition_protein   g       30% of the calorie target / 4 kcal
+    |   nutrition_carbs     g       45% of the calorie target / 4 kcal
+    |   nutrition_fat       g       25% of the calorie target / 9 kcal
+    |   nutrition_fiber     g       fixed gram target
+    |
+    | Manually edited targets keep source "manual" and are never
+    | overwritten by a recalculation unless overwrite_manual is sent.
+    |
     */
 
     'nutrition' => [
@@ -103,6 +118,48 @@ return [
         'ai_estimated',
         'device_imported',
         'user_manual',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication
+    |--------------------------------------------------------------------------
+    |
+    | Sanctum bearer tokens issued by /auth/login and /auth/register
+    | expire after this many days. There is no refresh endpoint; the
+    | app signs the user out when an API call returns 401.
+    |
+    */
+
+    'auth' => [
+        'token_ttl_days' => (int) env('LONGLIVY_TOKEN_TTL_DAYS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Integrations
+    |--------------------------------------------------------------------------
+    |
+    | Outbound data providers. The barcode driver resolves unknown EANs
+    | against an external product database and caches the result as a
+    | catalog food; the recognition driver builds meal drafts from photo,
+    | voice or free-text input.
+    |
+    */
+
+    'integrations' => [
+        'barcode_driver' => env('LONGLIVY_BARCODE_DRIVER', 'open_food_facts'),
+        'barcode_base_url' => env(
+            'LONGLIVY_BARCODE_BASE_URL',
+            'https://world.openfoodfacts.org'
+        ),
+        'barcode_timeout' => (int) env('LONGLIVY_BARCODE_TIMEOUT', 5),
+
+        'recognition_driver' => env('LONGLIVY_RECOGNITION_DRIVER', 'ai'),
+        'recognition_provider' => env(
+            'LONGLIVY_RECOGNITION_PROVIDER',
+            'longlivy-keyword'
+        ),
     ],
 
 ];

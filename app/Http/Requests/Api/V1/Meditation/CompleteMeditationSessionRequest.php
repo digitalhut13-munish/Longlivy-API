@@ -20,6 +20,20 @@ class CompleteMeditationSessionRequest extends FormRequest
                 'date',
                 'before_or_equal:now',
             ],
+
+            'active_seconds' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'paused_seconds' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:0',
+            ],
         ];
     }
 
@@ -27,6 +41,10 @@ class CompleteMeditationSessionRequest extends FormRequest
     {
         return [
             'ended_at.before_or_equal' => 'End time cannot be in the future.',
+            'active_seconds.integer' => 'Active seconds must be a whole number.',
+            'active_seconds.min' => 'Active seconds cannot be negative.',
+            'paused_seconds.integer' => 'Paused seconds must be a whole number.',
+            'paused_seconds.min' => 'Paused seconds cannot be negative.',
         ];
     }
 }

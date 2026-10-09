@@ -137,16 +137,32 @@ class EnergyController extends Controller
 
     /**
      * Calculate the personal nutrition targets automatically.
+     *
+     * Accepts an optional weekly pace ("weekly_change_kg", 0.25-1.0
+     * kg/week) that replaces the fixed -500 / +500 kcal adjustment
+     * with weekly_change_kg * 7700 / 7 per day, and optionally
+     * "overwrite_manual" to replace hand-edited targets.
      */
     public function calculateTargets(Request $request): JsonResponse
     {
         $data = $request->validate([
             'direction' => ['nullable', 'in:maintain,lose,gain'],
+            'weekly_change_kg' => [
+                'nullable',
+                'numeric',
+                'min:0.25',
+                'max:1.0',
+            ],
+            'overwrite_manual' => ['nullable', 'boolean'],
         ]);
 
         $result = $this->goalService->calculate(
             $request->user(),
-            $data['direction'] ?? 'maintain'
+            $data['direction'] ?? 'maintain',
+            isset($data['weekly_change_kg'])
+                ? (float) $data['weekly_change_kg']
+                : null,
+            (bool) ($data['overwrite_manual'] ?? false)
         );
 
         return response()->json([

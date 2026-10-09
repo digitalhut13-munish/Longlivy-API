@@ -18,6 +18,7 @@ class UpdateMealRequest extends FormRequest
             'meal_type' => ['sometimes', 'string', 'in:'.implode(',', Meal::types())],
             'name' => ['nullable', 'string', 'max:191'],
             'logged_at' => ['sometimes', 'date'],
+            'date' => ['sometimes', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

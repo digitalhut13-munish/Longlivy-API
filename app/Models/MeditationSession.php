@@ -29,6 +29,9 @@ class MeditationSession extends Model
         'ended_at',
         'paused_at',
         'paused_seconds',
+        'position_seconds',
+        'active_seconds',
+        'progress_updated_at',
         'date',
         'notes',
     ];
@@ -42,6 +45,9 @@ class MeditationSession extends Model
             'ended_at' => 'datetime',
             'paused_at' => 'datetime',
             'paused_seconds' => 'integer',
+            'position_seconds' => 'integer',
+            'active_seconds' => 'integer',
+            'progress_updated_at' => 'datetime',
             'date' => 'date',
         ];
     }

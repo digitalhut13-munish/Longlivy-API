@@ -11,6 +11,31 @@ class StoreMeditationReminderRequest extends FormRequest
         return auth()->check();
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('days_of_week') && is_array($this->days_of_week)) {
+            $days = $this->days_of_week;
+
+            $valid = array_reduce(
+                $days,
+                fn (bool $carry, $day) => $carry
+                    && (is_int($day)
+                        || preg_match('/^\d+$/', (string) $day))
+                    && (int) $day >= 0 && (int) $day <= 6,
+                true
+            );
+
+            if ($valid) {
+                $this->merge([
+                    'days_of_week' => implode(
+                        ',',
+                        array_map('intval', $days)
+                    ),
+                ]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -34,6 +34,16 @@ class User extends Authenticatable
         ];
     }
 
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    public function emailVerificationCodes(): HasMany
+    {
+        return $this->hasMany(EmailVerificationCode::class);
+    }
+
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class);
@@ -87,5 +97,35 @@ class User extends Authenticatable
     public function meditationReminders(): HasMany
     {
         return $this->hasMany(MeditationReminder::class);
+    }
+
+    public function meditationTemplates(): HasMany
+    {
+        return $this->hasMany(MeditationTemplate::class);
+    }
+
+    public function fastingPlans(): HasMany
+    {
+        return $this->hasMany(FastingPlan::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(Device::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function notificationSettings(): HasMany
+    {
+        return $this->hasMany(NotificationSetting::class);
     }
 }

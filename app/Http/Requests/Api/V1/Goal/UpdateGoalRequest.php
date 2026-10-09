@@ -70,6 +70,14 @@ class UpdateGoalRequest extends FormRequest
                 'sometimes',
                 'boolean',
             ],
+
+            'source' => [
+                'sometimes',
+                Rule::in([
+                    'manual',
+                    'longlivy_calculated',
+                ]),
+            ],
         ];
     }
 }

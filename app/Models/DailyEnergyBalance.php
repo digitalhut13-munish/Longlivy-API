@@ -26,7 +26,7 @@ class DailyEnergyBalance extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'bmr' => 'decimal:2',
         'everyday_activity' => 'decimal:2',
         'sport_activity' => 'decimal:2',

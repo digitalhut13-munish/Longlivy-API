@@ -22,15 +22,29 @@ class RecipeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $filters = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
         $recipes = $this->recipeService->getUserRecipes(
-            $request->user()
+            $request->user(),
+            $filters
         );
 
         return response()->json([
             'success' => true,
             'message' => 'Recipes retrieved successfully.',
             'data' => [
-                'recipes' => RecipeResource::collection($recipes),
+                'recipes' => RecipeResource::collection(
+                    $recipes->items()
+                ),
+                'meta' => [
+                    'current_page' => $recipes->currentPage(),
+                    'per_page' => $recipes->perPage(),
+                    'total' => $recipes->total(),
+                    'last_page' => $recipes->lastPage(),
+                ],
             ],
         ]);
     }

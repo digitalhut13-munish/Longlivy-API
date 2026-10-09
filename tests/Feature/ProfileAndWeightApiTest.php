@@ -52,6 +52,92 @@ class ProfileAndWeightApiTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_invalid_gender_is_rejected(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->putJson('/api/v1/profile', [
+            'gender' => 'zzz',
+        ])->assertStatus(422)->assertJsonValidationErrors('gender');
+    }
+
+    public function test_onboarding_fields_can_be_updated(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $this->putJson('/api/v1/profile', [
+            'goal' => 'muscle_gain',
+            'weight_change_pace_kg_per_week' => 0.5,
+            'training_frequency' => 3,
+            'training_volume' => 'moderate',
+            'preferred_fasting_method' => '16:8',
+            'micronutrient_focus' => ['vitamin_d', 'iron'],
+            'avatar_id' => 'avatar_leaf',
+            'language' => 'de',
+        ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.profile.goal', 'muscle_gain')
+            ->assertJsonPath('data.user.profile.weight_change_pace_kg_per_week', '0.50')
+            ->assertJsonPath('data.user.profile.training_frequency', 3)
+            ->assertJsonPath('data.user.profile.training_volume', 'moderate')
+            ->assertJsonPath('data.user.profile.preferred_fasting_method', '16:8')
+            ->assertJsonPath('data.user.profile.micronutrient_focus', ['vitamin_d', 'iron'])
+            ->assertJsonPath('data.user.profile.avatar_id', 'avatar_leaf')
+            ->assertJsonPath('data.user.profile.language', 'de');
+
+        $this->assertDatabaseHas('user_profiles', [
+            'user_id' => $user->id,
+            'goal' => 'muscle_gain',
+            'weight_change_pace_kg_per_week' => 0.5,
+            'training_frequency' => 3,
+            'training_volume' => 'moderate',
+            'preferred_fasting_method' => '16:8',
+            'avatar_id' => 'avatar_leaf',
+            'language' => 'de',
+        ]);
+    }
+
+    public function test_onboarding_field_validation(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->putJson('/api/v1/profile', [
+            'goal' => 'lose_fast',
+            'weight_change_pace_kg_per_week' => 2.0,
+            'training_frequency' => 20,
+            'training_volume' => 'extreme',
+            'micronutrient_focus' => [12],
+            'language' => 'fr',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'goal',
+                'weight_change_pace_kg_per_week',
+                'training_frequency',
+                'training_volume',
+                'micronutrient_focus.0',
+                'language',
+            ]);
+    }
+
+    public function test_date_of_birth_is_serialized_consistently(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $put = $this->putJson('/api/v1/profile', [
+            'date_of_birth' => '1990-05-01',
+            'gender' => 'female',
+        ]);
+
+        $put->assertStatus(200)
+            ->assertJsonPath('data.user.profile.date_of_birth', '1990-05-01');
+
+        $this->getJson('/api/v1/profile')
+            ->assertStatus(200)
+            ->assertJsonPath('data.user.profile.date_of_birth', '1990-05-01');
+    }
+
     public function test_empty_profile_update_is_rejected(): void
     {
         Sanctum::actingAs(User::factory()->create());

@@ -27,14 +27,14 @@ Route::get('/weight-logs/latest', [
 Route::get('/weight-logs/{weightLog}', [
     WeightLogController::class,
     'show',
-]);
+])->whereNumber('weightLog');
 
 Route::put('/weight-logs/{weightLog}', [
     WeightLogController::class,
     'update',
-]);
+])->whereNumber('weightLog');
 
 Route::delete('/weight-logs/{weightLog}', [
     WeightLogController::class,
     'destroy',
-]);
+])->whereNumber('weightLog');

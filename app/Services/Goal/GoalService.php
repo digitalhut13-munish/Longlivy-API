@@ -28,6 +28,15 @@ class GoalService
         Goal $goal,
         array $data
     ): Goal {
+        // A value edited by the user is a manual target; it must never
+        // be silently overwritten by the next recalculation. An
+        // explicit "source" in the body always wins.
+        if (array_key_exists('target_value', $data)
+            && ! array_key_exists('source', $data)
+        ) {
+            $data['source'] = 'manual';
+        }
+
         $goal->update($data);
 
         return $goal->fresh();

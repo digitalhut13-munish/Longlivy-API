@@ -17,6 +17,8 @@ Route::prefix('v1')->group(function () {
         require __DIR__.'/api/v1/nutrition.php';
         require __DIR__.'/api/v1/energy.php';
         require __DIR__.'/api/v1/meditation.php';
+        require __DIR__.'/api/v1/notifications.php';
+        require __DIR__.'/api/v1/activities.php';
 
     });
 

@@ -5,7 +5,7 @@ namespace App\Services\Nutrition;
 use App\Models\Recipe;
 use App\Models\RecipeItem;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class RecipeService
@@ -15,12 +15,18 @@ class RecipeService
         private readonly NutritionCalculator $calculator
     ) {}
 
-    public function getUserRecipes(User $user): Collection
-    {
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function getUserRecipes(
+        User $user,
+        array $filters = []
+    ): LengthAwarePaginator {
         return $user->recipes()
             ->with('items')
             ->orderByDesc('created_at')
-            ->get();
+            ->paginate((int) ($filters['per_page'] ?? 50))
+            ->withQueryString();
     }
 
     /**

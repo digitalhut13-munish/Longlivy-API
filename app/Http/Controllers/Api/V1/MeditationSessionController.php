@@ -37,6 +37,13 @@ class MeditationSessionController extends Controller
             ],
             'from' => ['sometimes', 'date'],
             'to' => ['sometimes', 'date'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => [
+                'sometimes',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
         ]);
 
         $sessions = $this->sessionService->getUserSessions(
@@ -49,8 +56,14 @@ class MeditationSessionController extends Controller
             'message' => 'Meditation sessions retrieved successfully.',
             'data' => [
                 'sessions' => MeditationSessionResource::collection(
-                    $sessions
+                    $sessions->items()
                 ),
+                'meta' => [
+                    'current_page' => $sessions->currentPage(),
+                    'per_page' => $sessions->perPage(),
+                    'total' => $sessions->total(),
+                    'last_page' => $sessions->lastPage(),
+                ],
             ],
         ]);
     }
@@ -120,7 +133,7 @@ class MeditationSessionController extends Controller
     }
 
     /**
-     * Update a meditation session.
+     * Update a meditation session (notes or playback progress).
      */
     public function update(
         UpdateMeditationSessionRequest $request,
@@ -130,7 +143,17 @@ class MeditationSessionController extends Controller
 
         $data = $request->validated();
 
-        if ($data === []) {
+        $progressKeys = [
+            'position_seconds',
+            'active_seconds',
+            'paused_seconds',
+            'client_timestamp',
+        ];
+
+        $progress = array_intersect_key($data, array_flip($progressKeys));
+        $rest = array_diff_key($data, array_flip($progressKeys));
+
+        if ($rest === [] && ! isset($progress['client_timestamp'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'No updatable fields received.',
@@ -144,7 +167,16 @@ class MeditationSessionController extends Controller
             ], 422);
         }
 
-        $session = $this->sessionService->update($session, $data);
+        if ($rest !== []) {
+            $session = $this->sessionService->update($session, $rest);
+        }
+
+        if (isset($progress['client_timestamp'])) {
+            $session = $this->sessionService->saveProgress(
+                $session,
+                $progress
+            );
+        }
 
         return response()->json([
             'success' => true,
@@ -210,6 +242,12 @@ class MeditationSessionController extends Controller
             $session,
             ! empty($data['ended_at'])
                 ? Carbon::parse($data['ended_at'])
+                : null,
+            isset($data['active_seconds'])
+                ? (int) $data['active_seconds']
+                : null,
+            isset($data['paused_seconds'])
+                ? (int) $data['paused_seconds']
                 : null
         );
 

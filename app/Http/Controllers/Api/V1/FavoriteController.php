@@ -23,18 +23,29 @@ class FavoriteController extends Controller
     {
         $data = $request->validate([
             'type' => ['nullable', 'in:food,meal,meditation'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $favorites = $this->favoriteService->list(
             $request->user(),
-            $data['type'] ?? null
+            $data['type'] ?? null,
+            $data
         );
 
         return response()->json([
             'success' => true,
             'message' => 'Favorites retrieved successfully.',
             'data' => [
-                'favorites' => FavoriteResource::collection($favorites),
+                'favorites' => FavoriteResource::collection(
+                    $favorites->items()
+                ),
+                'meta' => [
+                    'current_page' => $favorites->currentPage(),
+                    'per_page' => $favorites->perPage(),
+                    'total' => $favorites->total(),
+                    'last_page' => $favorites->lastPage(),
+                ],
             ],
         ]);
     }
