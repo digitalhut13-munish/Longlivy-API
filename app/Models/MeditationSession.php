@@ -21,6 +21,8 @@ class MeditationSession extends Model
     protected $fillable = [
         'user_id',
         'meditation_id',
+        'template_id',
+        'title',
         'type',
         'status',
         'planned_minutes',
@@ -39,6 +41,8 @@ class MeditationSession extends Model
     protected function casts(): array
     {
         return [
+            'meditation_id' => 'integer',
+            'template_id' => 'integer',
             'planned_minutes' => 'integer',
             'actual_minutes' => 'integer',
             'started_at' => 'datetime',
@@ -60,6 +64,11 @@ class MeditationSession extends Model
     public function meditation(): BelongsTo
     {
         return $this->belongsTo(Meditation::class);
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(MeditationTemplate::class, 'template_id');
     }
 
     public function isRunning(): bool

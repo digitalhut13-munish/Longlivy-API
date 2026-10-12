@@ -78,7 +78,20 @@ class SessionService
             }
         }
 
-        $type = $data['type'] ?? $meditation?->type;
+        $template = null;
+
+        if (! empty($data['template_id'])) {
+            $template = $user->meditationTemplates()
+                ->find($data['template_id']);
+
+            if ($template === null) {
+                throw ValidationException::withMessages([
+                    'template_id' => 'The selected template is not available.',
+                ]);
+            }
+        }
+
+        $type = $data['type'] ?? $meditation?->type ?? $template?->type;
 
         if ($type === null) {
             throw ValidationException::withMessages([
@@ -86,12 +99,20 @@ class SessionService
             ]);
         }
 
+        // Snapshot the content title, fall back to the client-supplied
+        // title for unguided/custom sessions, then to the template name.
+        $title = $meditation?->title
+            ?? ($data['title'] ?? null)
+            ?? $template?->name;
+
         $startedAt = ! empty($data['started_at'])
             ? Carbon::parse($data['started_at'])
             : now();
 
         return $user->meditationSessions()->create([
             'meditation_id' => $meditation?->id,
+            'template_id' => $template?->id,
+            'title' => $title,
             'type' => $type,
             'status' => MeditationSession::STATUS_ACTIVE,
             'planned_minutes' => $data['planned_minutes'],

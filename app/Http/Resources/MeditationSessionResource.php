@@ -18,6 +18,9 @@ class MeditationSessionResource extends JsonResource
                     : null
             ),
 
+            'title' => $this->title,
+            'template_id' => $this->template_id,
+
             'type' => $this->type,
             'status' => $this->status,
             'is_running' => $this->isRunning(),

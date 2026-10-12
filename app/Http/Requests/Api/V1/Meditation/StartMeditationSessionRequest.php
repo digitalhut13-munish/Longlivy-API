@@ -23,6 +23,21 @@ class StartMeditationSessionRequest extends FormRequest
                 'exists:meditations,id',
             ],
 
+            'template_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('meditation_templates', 'id')
+                    ->where('user_id', $this->user()?->id),
+            ],
+
+            'title' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
             'type' => [
                 'required_without:meditation_id',
                 'string',
@@ -80,6 +95,10 @@ class StartMeditationSessionRequest extends FormRequest
             'planned_minutes.max' => "Planned duration cannot be more than {$max} minutes.",
 
             'meditation_id.exists' => 'The selected meditation is not available.',
+
+            'template_id.exists' => 'The selected template is not available.',
+
+            'title.max' => 'Session title cannot be longer than 255 characters.',
 
             'started_at.before_or_equal' => 'Start time cannot be in the future.',
         ];

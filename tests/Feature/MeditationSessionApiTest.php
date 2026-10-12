@@ -142,6 +142,94 @@ class MeditationSessionApiTest extends TestCase
             ->assertJsonPath('data.session.meditation.id', $meditation->id);
     }
 
+    public function test_session_start_snapshots_content_title(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $meditation = $this->makeMeditation(['title' => 'Calm Body Scan']);
+
+        $response = $this->postJson('/api/v1/meditation/sessions', [
+            'meditation_id' => $meditation->id,
+            'planned_minutes' => 10,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.session.title', 'Calm Body Scan')
+            ->assertJsonPath('data.session.template_id', null);
+
+        $this->assertDatabaseHas('meditation_sessions', [
+            'id' => $response->json('data.session.id'),
+            'meditation_id' => $meditation->id,
+            'title' => 'Calm Body Scan',
+        ]);
+    }
+
+    public function test_session_accepts_client_title_and_owned_template(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $template = $user->meditationTemplates()->create([
+            'name' => 'Morning 10',
+            'duration_seconds' => 600,
+            'type' => 'free',
+            'breathing_enabled' => false,
+            'closing_sound_enabled' => true,
+        ]);
+
+        $this->postJson('/api/v1/meditation/sessions', [
+            'type' => 'free',
+            'planned_minutes' => 10,
+            'title' => 'My custom sit',
+            'template_id' => $template->id,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.session.title', 'My custom sit')
+            ->assertJsonPath('data.session.template_id', $template->id);
+    }
+
+    public function test_session_without_title_falls_back_to_template_name(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $template = $user->meditationTemplates()->create([
+            'name' => 'Evening Wind Down',
+            'duration_seconds' => 900,
+            'type' => 'free',
+            'breathing_enabled' => false,
+            'closing_sound_enabled' => true,
+        ]);
+
+        $this->postJson('/api/v1/meditation/sessions', [
+            'type' => 'free',
+            'planned_minutes' => 15,
+            'template_id' => $template->id,
+        ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.session.title', 'Evening Wind Down')
+            ->assertJsonPath('data.session.template_id', $template->id);
+    }
+
+    public function test_session_rejects_another_users_template(): void
+    {
+        $owner = User::factory()->create();
+        $template = $owner->meditationTemplates()->create([
+            'name' => 'Owner template',
+            'duration_seconds' => 600,
+            'type' => 'free',
+            'breathing_enabled' => false,
+            'closing_sound_enabled' => true,
+        ]);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation/sessions', [
+            'type' => 'free',
+            'planned_minutes' => 10,
+            'template_id' => $template->id,
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['template_id']);
+    }
+
     public function test_pause_resume_and_complete_excludes_paused_time(): void
     {
         Sanctum::actingAs($user = User::factory()->create());
