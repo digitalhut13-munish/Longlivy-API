@@ -346,11 +346,18 @@ class NutritionCatalogApiTest extends TestCase
 
     public function test_meal_logged_at_keeps_utc_and_date_uses_profile_timezone(): void
     {
-        Sanctum::actingAs($this->makeUser(['timezone' => 'Europe/Berlin']));
+        Sanctum::actingAs($user = $this->makeUser(['timezone' => 'Europe/Berlin']));
 
+        $food = Food::factory()->create(['user_id' => $user->id]);
         $meal = $this->postJson('/api/v1/meals', [
             'meal_type' => 'dinner',
             'logged_at' => '2026-10-07T19:00:00+02:00',
+            'items' => [
+                [
+                    'food_id' => $food->id,
+                    'quantity' => 100,
+                ],
+            ],
         ])
             ->assertStatus(201)
             ->assertJsonPath('data.meal.date', '2026-10-07');
@@ -367,11 +374,17 @@ class NutritionCatalogApiTest extends TestCase
 
     public function test_meal_date_is_honoured_instead_of_dropped(): void
     {
-        Sanctum::actingAs(User::factory()->create());
-
+        Sanctum::actingAs($user = User::factory()->create());
+        $food = Food::factory()->create(['user_id' => $user->id]);
         $this->postJson('/api/v1/meals', [
             'meal_type' => 'lunch',
             'date' => '2026-10-05',
+            'items' => [
+                [
+                    'food_id' => $food->id,
+                    'quantity' => 100,
+                ],
+            ],
         ])
             ->assertStatus(201)
             ->assertJsonPath('data.meal.date', '2026-10-05');

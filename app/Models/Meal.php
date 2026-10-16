@@ -53,6 +53,6 @@ class Meal extends Model
      */
     public static function types(): array
     {
-        return ['breakfast', 'lunch', 'dinner', 'snack', 'custom'];
+        return ['breakfast', 'lunch', 'dinner', 'snack'];
     }
 }

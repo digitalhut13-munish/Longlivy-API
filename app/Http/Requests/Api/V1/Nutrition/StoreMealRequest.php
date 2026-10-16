@@ -21,7 +21,7 @@ class StoreMealRequest extends FormRequest
             'logged_at' => ['nullable', 'date'],
             'date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'items' => ['sometimes', 'array'],
+            'items' => ['required', 'array', 'min:1'],
             'items.*.food_id' => ['nullable', 'integer'],
             'items.*.name' => ['required_without:items.*.food_id', 'string', 'max:191'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
