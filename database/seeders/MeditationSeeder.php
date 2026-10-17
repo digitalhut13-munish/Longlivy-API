@@ -28,7 +28,7 @@ class MeditationSeeder extends Seeder
         [
             'title' => 'Let Go of Stress',
             'type' => 'guided',
-            'category' => 'stress-reduction',
+            'category' => 'stress_relief',
             'duration_minutes' => 15,
             'description' => 'Notice stress in the body and let it soften, breath by breath.',
         ],
@@ -42,49 +42,49 @@ class MeditationSeeder extends Seeder
         [
             'title' => 'Fall Asleep Peacefully',
             'type' => 'guided',
-            'category' => 'fall-asleep',
+            'category' => 'sleep',
             'duration_minutes' => 20,
             'description' => 'A slow wind down that guides you gently into sleep.',
         ],
         [
             'title' => 'Morning Clarity',
             'type' => 'guided',
-            'category' => 'morning-meditation',
+            'category' => 'morning',
             'duration_minutes' => 10,
             'description' => 'Start the day with a clear mind and a steady intention.',
         ],
         [
             'title' => 'Deep Focus',
             'type' => 'guided',
-            'category' => 'concentration',
+            'category' => 'focus',
             'duration_minutes' => 15,
             'description' => 'Gather your attention and settle into focused work.',
         ],
         [
             'title' => 'Short Reset',
             'type' => 'guided',
-            'category' => 'short-break',
+            'category' => 'calm',
             'duration_minutes' => 3,
             'description' => 'A three minute reset for a busy day.',
         ],
         [
             'title' => 'Body Awareness',
             'type' => 'guided',
-            'category' => 'body-perception',
+            'category' => 'mindfulness',
             'duration_minutes' => 12,
             'description' => 'Reconnect with physical sensations through gentle guidance.',
         ],
         [
             'title' => 'Evening Wind Down',
             'type' => 'guided',
-            'category' => 'evening-meditation',
+            'category' => 'calm',
             'duration_minutes' => 10,
             'description' => 'Close the day with a calm and grateful mind.',
         ],
         [
             'title' => 'Box Breathing',
             'type' => 'breathing',
-            'category' => 'breathing-meditation',
+            'category' => 'calm',
             'duration_minutes' => 5,
             'description' => 'Equal counts of inhale, hold, exhale and hold.',
             'breathing_pattern' => [
@@ -98,7 +98,7 @@ class MeditationSeeder extends Seeder
         [
             'title' => '4-7-8 Breathing',
             'type' => 'breathing',
-            'category' => 'breathing-meditation',
+            'category' => 'calm',
             'duration_minutes' => 7,
             'description' => 'A long exhale breathing pattern for deep calm.',
             'breathing_pattern' => [
@@ -112,7 +112,7 @@ class MeditationSeeder extends Seeder
         [
             'title' => 'Nadi Shodhana',
             'type' => 'breathing',
-            'category' => 'breathing-meditation',
+            'category' => 'energy',
             'duration_minutes' => 5,
             'description' => 'Alternate nostril breathing to balance the mind.',
             'breathing_pattern' => [

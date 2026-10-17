@@ -10,7 +10,7 @@ class StoreMeditationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return (bool) $this->user()?->isAdmin();
     }
 
     public function rules(): array

@@ -376,7 +376,7 @@ class MeditationApiTest extends TestCase
 
     public function test_category_can_be_created(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $this->postJson('/api/v1/meditation/categories', [
             'name' => 'Self Compassion',
@@ -407,7 +407,7 @@ class MeditationApiTest extends TestCase
     {
         $this->makeCategory(['name' => 'Focus', 'slug' => 'focus']);
 
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $this->postJson('/api/v1/meditation/categories', [
             'name' => 'Focus',
@@ -420,7 +420,7 @@ class MeditationApiTest extends TestCase
     {
         $this->makeCategory();
 
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $this->postJson('/api/v1/meditation/categories', [])
             ->assertStatus(422)
@@ -445,7 +445,7 @@ class MeditationApiTest extends TestCase
     {
         $category = $this->makeCategory(['slug' => 'mindfulness']);
 
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $response = $this->postJson('/api/v1/meditation', [
             'title' => 'Loving Kindness',
@@ -488,7 +488,7 @@ class MeditationApiTest extends TestCase
 
     public function test_created_meditation_applies_defaults_and_stays_draft(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $response = $this->postJson('/api/v1/meditation', [
             'title' => 'Draft Piece',
@@ -517,7 +517,7 @@ class MeditationApiTest extends TestCase
 
     public function test_meditation_validates_type_category_and_urls(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->admin()->create());
 
         $this->postJson('/api/v1/meditation', [])
             ->assertStatus(422)
@@ -541,5 +541,51 @@ class MeditationApiTest extends TestCase
                 'category_id',
                 'audio_url',
             ]);
+    }
+
+    public function test_regular_user_cannot_create_a_category(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Sneaky Category',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('meditation_categories', [
+            'slug' => 'sneaky-category',
+        ]);
+    }
+
+    public function test_regular_user_cannot_create_a_meditation(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson('/api/v1/meditation', [
+            'title' => 'Sneaky Meditation',
+            'type' => 'guided',
+            'duration_minutes' => 5,
+            'status' => 'published',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('success', false);
+
+        $this->assertDatabaseMissing('meditations', [
+            'title' => 'Sneaky Meditation',
+        ]);
+    }
+
+    public function test_guest_cannot_create_catalog_content(): void
+    {
+        $this->postJson('/api/v1/meditation/categories', [
+            'name' => 'Anonymous Category',
+        ])->assertStatus(401);
+
+        $this->postJson('/api/v1/meditation', [
+            'title' => 'Anonymous Meditation',
+            'type' => 'guided',
+            'duration_minutes' => 5,
+        ])->assertStatus(401);
     }
 }

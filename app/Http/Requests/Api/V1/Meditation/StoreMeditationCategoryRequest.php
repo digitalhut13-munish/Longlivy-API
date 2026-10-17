@@ -8,7 +8,7 @@ class StoreMeditationCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check();
+        return (bool) $this->user()?->isAdmin();
     }
 
     public function rules(): array
@@ -25,7 +25,7 @@ class StoreMeditationCategoryRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:100',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                'regex:/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/',
                 'unique:meditation_categories,slug',
             ],
 

@@ -30,7 +30,7 @@ Route::get('/meditation/categories', [
 Route::post('/meditation/categories', [
     MeditationController::class,
     'storeCategory',
-]);
+])->middleware('admin');
 
 Route::get('/meditation/stats', [
     MeditationController::class,
@@ -171,7 +171,7 @@ Route::get('/meditation', [
 Route::post('/meditation', [
     MeditationController::class,
     'store',
-]);
+])->middleware('admin');
 
 Route::get('/meditation/{meditation}', [
     MeditationController::class,

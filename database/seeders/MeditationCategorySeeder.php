@@ -8,23 +8,23 @@ use Illuminate\Database\Seeder;
 class MeditationCategorySeeder extends Seeder
 {
     /**
-     * Categories used to filter guided meditations. The slug is the
-     * stable identifier and is managed by the backend, so new
-     * categories can be added later without app changes.
+     * Categories used to filter meditations. The slug is the stable
+     * identifier the app matches against, so these values are the
+     * canonical set the client recognises:
+     * morning, mindfulness, energy, focus, relaxation, calm,
+     * stress_relief, sleep.
      *
      * @var array<int, array{name: string, slug: string}>
      */
     private const CATEGORIES = [
-        ['name' => 'Relaxation', 'slug' => 'relaxation'],
-        ['name' => 'Stress Reduction', 'slug' => 'stress-reduction'],
+        ['name' => 'Morning', 'slug' => 'morning'],
         ['name' => 'Mindfulness', 'slug' => 'mindfulness'],
-        ['name' => 'Breathing Meditation', 'slug' => 'breathing-meditation'],
-        ['name' => 'Fall Asleep', 'slug' => 'fall-asleep'],
-        ['name' => 'Morning Meditation', 'slug' => 'morning-meditation'],
-        ['name' => 'Concentration', 'slug' => 'concentration'],
-        ['name' => 'Short Break', 'slug' => 'short-break'],
-        ['name' => 'Body Perception', 'slug' => 'body-perception'],
-        ['name' => 'Evening Meditation', 'slug' => 'evening-meditation'],
+        ['name' => 'Energy', 'slug' => 'energy'],
+        ['name' => 'Focus', 'slug' => 'focus'],
+        ['name' => 'Relaxation', 'slug' => 'relaxation'],
+        ['name' => 'Calm', 'slug' => 'calm'],
+        ['name' => 'Stress Relief', 'slug' => 'stress_relief'],
+        ['name' => 'Sleep', 'slug' => 'sleep'],
     ];
 
     public function run(): void

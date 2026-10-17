@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Meditation;
+use App\Models\MeditationCategory;
 use App\Models\MeditationSession;
 use App\Models\User;
+use Database\Seeders\MeditationCategorySeeder;
+use Database\Seeders\MeditationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -55,6 +58,60 @@ class MeditationContentApiTest extends TestCase
             'started_at' => now(),
             'date' => now()->toDateString(),
         ], $overrides));
+    }
+
+    public function test_seeded_categories_use_the_canonical_slugs(): void
+    {
+        $this->seed(MeditationCategorySeeder::class);
+
+        $slugs = MeditationCategory::query()->pluck('slug')->all();
+
+        $this->assertEqualsCanonicalizing([
+            'morning',
+            'mindfulness',
+            'energy',
+            'focus',
+            'relaxation',
+            'calm',
+            'stress_relief',
+            'sleep',
+        ], $slugs);
+    }
+
+    public function test_seeded_meditations_are_published_and_linked_to_canonical_categories(): void
+    {
+        $this->seed(MeditationCategorySeeder::class);
+        $this->seed(MeditationSeeder::class);
+
+        $canonical = [
+            'morning',
+            'mindfulness',
+            'energy',
+            'focus',
+            'relaxation',
+            'calm',
+            'stress_relief',
+            'sleep',
+        ];
+
+        $meditations = Meditation::with('category')->get();
+
+        $this->assertNotEmpty($meditations);
+        $this->assertTrue(
+            $meditations->every(
+                fn (Meditation $m) => $m->status === Meditation::STATUS_PUBLISHED
+            )
+        );
+
+        $linked = $meditations
+            ->filter(fn (Meditation $m) => $m->category !== null)
+            ->pluck('category.slug')
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->assertEmpty(array_diff($linked, $canonical));
+        $this->assertEqualsCanonicalizing($canonical, $linked);
     }
 
     public function test_catalog_publishes_content_audio_and_paging_meta(): void

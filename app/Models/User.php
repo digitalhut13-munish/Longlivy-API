@@ -19,11 +19,13 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'is_admin',
     ];
 
     protected function casts(): array
@@ -31,12 +33,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;
+    }
+
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
     }
 
     public function emailVerificationCodes(): HasMany
