@@ -37,6 +37,7 @@ class Activity extends Model
         'avg_heart_rate',
         'steps',
         'route_polyline',
+        'route_encoding',
         'route_point_count',
         'notes',
     ];
@@ -68,7 +69,7 @@ class Activity extends Model
         }
 
         return [
-            'encoding' => 'polyline5',
+            'encoding' => $this->route_encoding ?? 'polyline5',
             'points' => $this->route_polyline,
             'point_count' => (int) $this->route_point_count,
         ];

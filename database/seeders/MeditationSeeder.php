@@ -226,13 +226,23 @@ class MeditationSeeder extends Seeder
     {
         $slug = strtolower(str_replace(' ', '-', $title));
 
-        return "https://cdn.longlivy.example/meditations/{$slug}/thumb@2x.jpg";
+        $base = (string) config(
+            'longlivy.content.thumbnail_base_url',
+            'https://cdn.longlivy.example'
+        );
+
+        return "{$base}/meditations/{$slug}/thumb@2x.jpg";
     }
 
     private function audioUrl(string $title, string $language): string
     {
         $slug = strtolower(str_replace(' ', '-', $title));
 
-        return "https://audio.longlivy.example/meditations/{$slug}_{$language}.mp3";
+        $base = (string) config(
+            'longlivy.content.audio_base_url',
+            'https://audio.longlivy.example'
+        );
+
+        return "{$base}/meditations/{$slug}_{$language}.mp3";
     }
 }

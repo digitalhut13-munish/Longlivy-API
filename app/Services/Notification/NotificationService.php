@@ -2,6 +2,7 @@
 
 namespace App\Services\Notification;
 
+use App\Contracts\Integrations\PushNotificationService;
 use App\Models\Notification;
 use App\Models\NotificationSetting;
 use App\Models\User;
@@ -10,6 +11,11 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class NotificationService
 {
+    public function __construct(
+        private readonly PushNotificationService $push
+    ) {
+    }
+
     /**
      * Defaults matching the app's DEFAULT_SETTINGS: everything on
      * except the two that are opt-in by default.
@@ -31,6 +37,46 @@ class NotificationService
         'weight_reminder' => false,
         'meditation_reminder' => false,
     ];
+
+    /**
+     * Deliver an in-app notification (always) plus a device push when
+     * a transport is configured. Returns null when the type is unknown
+     * or the user turned the event off, unless $force is set (used by
+     * the test command).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function send(
+        User $user,
+        string $type,
+        string $title,
+        string $body,
+        array $data = [],
+        bool $force = false
+    ): ?Notification {
+        if (! array_key_exists($type, self::DEFAULT_SETTINGS)) {
+            return null;
+        }
+
+        if (! $force && ! ($this->settings($user)[$type] ?? false)) {
+            return null;
+        }
+
+        $notification = $user->notifications()->create([
+            'type' => $type,
+            'title' => $title,
+            'body' => $body,
+            'data' => $data !== [] ? $data : null,
+        ]);
+
+        $this->push->send($user, $type, $data + [
+            'notification_id' => $notification->id,
+            'title' => $title,
+            'body' => $body,
+        ]);
+
+        return $notification;
+    }
 
     public function inbox(
         User $user,

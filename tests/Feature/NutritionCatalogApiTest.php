@@ -228,6 +228,146 @@ class NutritionCatalogApiTest extends TestCase
             ->assertJsonValidationErrors('image');
     }
 
+    public function test_recognition_returns_two_items_each_with_nutrients(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->seedCatalog();
+
+        $egg = Food::where('name', 'Egg, whole')->first();
+        $rice = Food::where('name', 'White Rice, cooked')->first();
+
+        $items = $this->postJson('/api/v1/nutrition/recognize', [
+            'type' => 'text',
+            'text' => '2 eggs and 100 g rice',
+        ])
+            ->assertStatus(200)
+            ->json('data.draft.items');
+
+        $this->assertCount(2, $items);
+
+        $this->assertSame($egg->id, $items[0]['food_id']);
+        $this->assertSame(2, $items[0]['quantity']);
+        $this->assertSame('piece', $items[0]['unit']);
+        $this->assertSame(155.0, $items[0]['nutrients']['calories']);
+        $this->assertSame(12.6, $items[0]['nutrients']['protein']);
+        $this->assertSame(1.1, $items[0]['nutrients']['carbohydrates']);
+        $this->assertSame(10.6, $items[0]['nutrients']['fat']);
+        $this->assertSame(0.0, $items[0]['nutrients']['fiber']);
+
+        $this->assertSame($rice->id, $items[1]['food_id']);
+        $this->assertSame(100, $items[1]['quantity']);
+        $this->assertSame('g', $items[1]['unit']);
+        $this->assertSame(130.0, $items[1]['nutrients']['calories']);
+        $this->assertSame(2.7, $items[1]['nutrients']['protein']);
+        $this->assertSame(28.2, $items[1]['nutrients']['carbohydrates']);
+        $this->assertSame(0.3, $items[1]['nutrients']['fat']);
+        $this->assertSame(0.4, $items[1]['nutrients']['fiber']);
+    }
+
+    public function test_recognition_nutrients_scale_with_quantity(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->seedCatalog();
+
+        $items = $this->postJson('/api/v1/nutrition/recognize', [
+            'type' => 'text',
+            'text' => '200 g rice',
+        ])
+            ->assertStatus(200)
+            ->json('data.draft.items');
+
+        $this->assertSame(260.0, $items[0]['nutrients']['calories']);
+        $this->assertSame(5.4, $items[0]['nutrients']['protein']);
+    }
+
+    public function test_photo_recognition_accepts_the_documented_image_field(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        // A real 1x1 JPEG (no GD extension needed in this environment).
+        $jpeg = base64_decode(
+            '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a'
+            .'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIy'
+            .'MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAB'
+            .'AAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgED'
+            .'AwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcY'
+            .'GRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJ'
+            .'ipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo'
+            .'6erx8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q=='
+        );
+
+        $response = $this->post('/api/v1/nutrition/recognize', [
+            'type' => 'photo',
+            'image' => \Illuminate\Http\UploadedFile::fake()
+                ->createWithContent('meal.jpg', $jpeg),
+        ], ['Accept' => 'application/json']);
+
+        $response
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.needs_review', true)
+            ->assertJsonPath('data.persisted', false);
+
+        $this->assertIsArray($response->json('data.draft.items'));
+    }
+
+    public function test_common_searches_return_foods_with_nutrients(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->seedCatalog();
+
+        foreach (['apple', 'rice', 'egg', 'chicken'] as $term) {
+            $foods = $this->getJson('/api/v1/foods?q='.$term)
+                ->assertStatus(200)
+                ->json('data.foods');
+
+            $this->assertNotEmpty($foods, "No results for {$term}");
+
+            foreach ($foods as $food) {
+                $this->assertSame('g', $food['base_unit']);
+                $this->assertSame('100.00', $food['base_amount']);
+
+                foreach ([
+                    'calories',
+                    'protein',
+                    'carbohydrates',
+                    'fat',
+                ] as $nutrient) {
+                    $this->assertNotNull(
+                        $food['nutrients'][$nutrient],
+                        "Missing {$nutrient} for {$term}"
+                    );
+                }
+            }
+        }
+    }
+
+    public function test_food_search_pages_with_page_and_per_page(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->seedCatalog();
+
+        $first = $this->getJson('/api/v1/foods?per_page=5&page=1')
+            ->assertStatus(200)
+            ->assertJsonPath('data.meta.current_page', 1)
+            ->assertJsonPath('data.meta.per_page', 5)
+            ->assertJsonPath('data.meta.total', 18)
+            ->assertJsonPath('data.meta.last_page', 4)
+            ->json('data.foods');
+
+        $second = $this->getJson('/api/v1/foods?per_page=5&page=2')
+            ->assertStatus(200)
+            ->assertJsonPath('data.meta.current_page', 2)
+            ->json('data.foods');
+
+        $this->assertCount(5, $first);
+        $this->assertCount(5, $second);
+        $this->assertNotSame(
+            $first[0]['id'],
+            $second[0]['id']
+        );
+    }
+
     public function test_recognition_is_limited_to_twenty_per_hour(): void
     {
         Sanctum::actingAs(User::factory()->create());

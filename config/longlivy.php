@@ -162,4 +162,53 @@ return [
         ),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Content delivery
+    |--------------------------------------------------------------------------
+    |
+    | Base URLs the meditation seeders build audio and thumbnail URLs
+    | from. Set these to the real CDN host before seeding production;
+    | every generated URL is an absolute https URL.
+    |
+    */
+
+    'content' => [
+        'audio_base_url' => rtrim(
+            (string) env(
+                'MEDITATION_AUDIO_BASE_URL',
+                'https://audio.longlivy.example'
+            ),
+            '/'
+        ),
+        'thumbnail_base_url' => rtrim(
+            (string) env(
+                'MEDITATION_THUMBNAIL_BASE_URL',
+                'https://cdn.longlivy.example'
+            ),
+            '/'
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Push notifications
+    |--------------------------------------------------------------------------
+    |
+    | "stub" logs the push hop without delivering anything (tests and
+    | development). "expo" delivers through the Expo Push API, which
+    | needs no extra credentials for expo provider tokens; APNs/FCM
+    | delivery still requires the platform credentials to be configured
+    | on the Expo push service.
+    |
+    */
+
+    'push' => [
+        'driver' => env('LONGLIVY_PUSH_DRIVER', 'stub'),
+        'expo_endpoint' => env(
+            'EXPO_PUSH_ENDPOINT',
+            'https://exp.host/--/api/v2/push/send'
+        ),
+    ],
+
 ];

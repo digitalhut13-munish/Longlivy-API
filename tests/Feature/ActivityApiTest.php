@@ -206,6 +206,67 @@ class ActivityApiTest extends TestCase
             ->assertJsonPath('data.consumption.sport_activity', 0.0);
     }
 
+    public function test_activity_with_null_calories_is_accepted(): void
+    {
+        Sanctum::actingAs($user = $this->makeUser());
+
+        $this->postJson('/api/v1/activities', $this->payload([
+            'client_id' => 'act_no_calories',
+            'calories_kcal' => null,
+        ]))
+            ->assertStatus(201)
+            ->assertJsonPath('data.activity.calories_kcal', null);
+
+        $this->getJson('/api/v1/energy/balance?date=2026-10-08')
+            ->assertStatus(200)
+            ->assertJsonPath('data.consumption.sport_activity', 0.0);
+
+        unset($user);
+    }
+
+    public function test_gps_route_is_read_back_exactly_as_uploaded(): void
+    {
+        Sanctum::actingAs($this->makeUser());
+
+        $route = [
+            'encoding' => 'polyline6',
+            'points' => 'owh`I_jnpAe`NbB',
+            'point_count' => 2,
+        ];
+
+        $this->postJson('/api/v1/activities', $this->payload([
+            'client_id' => 'act_route',
+            'route' => $route,
+        ]))
+            ->assertStatus(201)
+            ->assertJsonPath('data.activity.route.encoding', 'polyline6')
+            ->assertJsonPath('data.activity.route.points', $route['points'])
+            ->assertJsonPath('data.activity.route.point_count', 2);
+
+        $id = Activity::where('client_id', 'act_route')->value('id');
+
+        $this->getJson('/api/v1/activities/'.$id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.activity.route.encoding', 'polyline6')
+            ->assertJsonPath('data.activity.route.points', $route['points'])
+            ->assertJsonPath('data.activity.route.point_count', 2);
+    }
+
+    public function test_route_sent_as_plain_point_list_is_rejected(): void
+    {
+        Sanctum::actingAs($this->makeUser());
+
+        $this->postJson('/api/v1/activities', $this->payload([
+            'client_id' => 'act_bad_route',
+            'route' => [
+                ['lat' => 28.61, 'lng' => 77.20],
+                ['lat' => 28.62, 'lng' => 77.21],
+            ],
+        ]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('route.points');
+    }
+
     public function test_user_cannot_touch_another_users_activity(): void
     {
         Sanctum::actingAs($this->makeUser());

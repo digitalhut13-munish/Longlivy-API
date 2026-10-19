@@ -4,11 +4,17 @@ namespace App\Services\Streak;
 
 use App\Models\User;
 use App\Models\UserStreak;
+use App\Services\Notification\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 
 class StreakService
 {
+    public function __construct(
+        private readonly NotificationService $notifications
+    ) {
+    }
+
     public function getUserStreaks(User $user): Collection
     {
         return $user->streaks()
@@ -59,6 +65,24 @@ class StreakService
         }
 
         $streak->save();
+
+        if ($type === 'fasting'
+            && $streak->current_streak > 0
+            && $streak->current_streak % 7 === 0
+        ) {
+            $this->notifications->send(
+                $user,
+                'fasting_streak_reached',
+                $streak->current_streak.'-day fasting streak',
+                'You have completed '.$streak->current_streak
+                    .' fasts in a row. Keep it going!',
+                [
+                    'type' => 'fasting',
+                    'streak' => $streak->current_streak,
+                    'longest_streak' => $streak->longest_streak,
+                ]
+            );
+        }
 
         return $streak->fresh();
     }

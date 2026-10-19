@@ -29,7 +29,7 @@ class FastingPlanOverride extends Model
 
     public function plan(): BelongsTo
     {
-        return $this->belongsTo(FastingPlan::class);
+        return $this->belongsTo(FastingPlan::class, 'plan_id');
     }
 
     public function user(): BelongsTo

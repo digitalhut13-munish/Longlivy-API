@@ -180,6 +180,14 @@ class EnergyBalanceService
             return;
         }
 
+        // Without a calorie value there is nothing to add to the
+        // projection; drop any earlier estimate for this activity.
+        if ($activity->calories_kcal === null) {
+            $this->removeActivity($user, $activity);
+
+            return;
+        }
+
         EnergyExpenditure::updateOrCreate(
             [
                 'user_id' => $user->id,

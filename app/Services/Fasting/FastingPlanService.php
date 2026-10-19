@@ -6,6 +6,7 @@ use App\Models\FastingPlan;
 use App\Models\FastingPlanOverride;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 class FastingPlanService
@@ -26,7 +27,7 @@ class FastingPlanService
 
     public function create(User $user, array $data): FastingPlan
     {
-        $this->assertChecksum($data);
+        $this->assertChecksum((int) $data['fasting_hours'], (int) $data['eating_hours']);
 
         $active = $data['active'] ?? true;
 
@@ -42,7 +43,10 @@ class FastingPlanService
         FastingPlan $plan,
         array $data
     ): FastingPlan {
-        $this->assertChecksum($data);
+        $this->assertChecksum(
+            $data['fasting_hours'] ?? $plan->fasting_hours,
+            $data['eating_hours'] ?? $plan->eating_hours,
+        );
 
         $active = $data['active'] ?? $plan->active;
 
@@ -50,7 +54,7 @@ class FastingPlanService
             $this->deactivateOthers($plan->user, $plan->id);
         }
 
-        $plan->update($this->prepareData($data));
+        $plan->update($this->prepareUpdateData($data));
 
         return $plan->fresh();
     }
@@ -110,7 +114,7 @@ class FastingPlanService
             'recurring' => $data['recurring'],
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'],
-            'weekdays' => $data['weekdays'],
+            'weekdays' => $this->normalizeWeekdays($data['weekdays']),
             'start_date' => $data['start_date'],
             'end_date' => $data['end_date'] ?? null,
             'timezone' => $data['timezone'],
@@ -119,6 +123,46 @@ class FastingPlanService
             'active' => $data['active'] ?? true,
             'notification_settings' => $data['notification_settings'] ?? [],
         ];
+    }
+
+    /**
+     * Partial updates only touch the keys that were actually sent, so a
+     * payload such as {"active": false} never trips over missing fields.
+     */
+    private function prepareUpdateData(array $data): array
+    {
+        $attributes = Arr::only($data, [
+            'method',
+            'category',
+            'recurring',
+            'start_time',
+            'end_time',
+            'weekdays',
+            'start_date',
+            'end_date',
+            'timezone',
+            'fasting_hours',
+            'eating_hours',
+            'active',
+            'notification_settings',
+        ]);
+
+        if (array_key_exists('weekdays', $attributes)) {
+            $attributes['weekdays'] = $this->normalizeWeekdays(
+                $attributes['weekdays']
+            );
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Weekdays round-trip exactly as sent: a list of 0-6 integers
+     * (0 = Sunday), with no deduplication or reordering.
+     */
+    private function normalizeWeekdays(mixed $weekdays): array
+    {
+        return array_values(array_map('intval', (array) $weekdays));
     }
 
     private function deactivateOthers(
@@ -131,10 +175,10 @@ class FastingPlanService
             ->update(['active' => false]);
     }
 
-    private function assertChecksum(array $data): void
+    private function assertChecksum(int $fasting, int $eating): void
     {
-        $wantedFasting = (int) $data['fasting_hours'];
-        $wantedEating = (int) $data['eating_hours'];
+        $wantedFasting = (int) $fasting;
+        $wantedEating = (int) $eating;
 
         // Users may pick any hours, even mismatched method strings,
         // as long as they stay inside the supported range.

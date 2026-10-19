@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -196,5 +197,103 @@ class NotificationApiTest extends TestCase
                 'not_a_real_event' => true,
             ],
         ])->assertStatus(422);
+    }
+
+    public function test_single_notification_can_be_fetched(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $notification = $user->notifications()->create([
+            'type' => 'fasting_begins',
+            'title' => 'Fast started',
+            'body' => 'Your fast is running.',
+            'data' => ['fasting_id' => 'abc'],
+        ]);
+
+        $this->getJson('/api/v1/notifications/'.$notification->id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.notification.id', $notification->id)
+            ->assertJsonPath('data.notification.type', 'fasting_begins')
+            ->assertJsonPath('data.notification.title', 'Fast started');
+    }
+
+    public function test_starting_a_fast_creates_a_notification(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $this->postJson('/api/v1/fasting', [
+            'fasting_type' => '16:8',
+            'planned_hours' => 16,
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $user->id,
+            'type' => 'fasting_begins',
+        ]);
+
+        $this->getJson('/api/v1/notifications')
+            ->assertStatus(200)
+            ->assertJsonPath('data.unread_count', 1)
+            ->assertJsonPath('data.notifications.0.type', 'fasting_begins');
+    }
+
+    public function test_disabling_an_event_suppresses_the_notification(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $this->putJson('/api/v1/notification-settings', [
+            'settings' => ['fasting_begins' => false],
+        ])->assertStatus(200);
+
+        $this->postJson('/api/v1/fasting', [
+            'fasting_type' => '16:8',
+            'planned_hours' => 16,
+        ])->assertStatus(201);
+
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $user->id,
+            'type' => 'fasting_begins',
+        ]);
+    }
+
+    public function test_expo_push_is_delivered_to_registered_devices(): void
+    {
+        config(['longlivy.push.driver' => 'expo']);
+
+        Http::fake([
+            'exp.host/*' => Http::response(['data' => [['status' => 'ok']]], 200),
+        ]);
+
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $user->devices()->create([
+            'token' => 'ExponentPushToken[abc123]',
+            'provider' => 'expo',
+            'platform' => 'ios',
+        ]);
+
+        $this->artisan('longlivy:notify-test', [
+            'email' => $user->email,
+            '--type' => 'fasting_begins',
+            '--title' => 'Push check',
+            '--body' => 'Delivered via Expo.',
+        ])->assertExitCode(0);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://exp.host/--/api/v2/push/send'
+                && $request['to'] === 'ExponentPushToken[abc123]'
+                && $request['title'] === 'Push check'
+                && $request['body'] === 'Delivered via Expo.';
+        });
+    }
+
+    public function test_notify_test_command_rejects_unknown_type(): void
+    {
+        Sanctum::actingAs($user = User::factory()->create());
+
+        $this->artisan('longlivy:notify-test', [
+            'email' => $user->email,
+            '--type' => 'not_a_real_event',
+        ])->assertExitCode(1);
     }
 }

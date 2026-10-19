@@ -11,6 +11,7 @@ use App\Services\Integrations\AiMealRecognitionService;
 use App\Services\Integrations\OpenFoodFactsBarcodeLookupService;
 use App\Services\Integrations\StubBarcodeLookupService;
 use App\Services\Integrations\StubHealthPlatformAdapter;
+use App\Services\Integrations\ExpoPushNotificationService;
 use App\Services\Integrations\StubMealRecognitionService;
 use App\Services\Integrations\StubPushNotificationService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -50,7 +51,12 @@ class AppServiceProvider extends ServiceProvider
             );
         }
 
-        $this->app->bind(PushNotificationService::class, StubPushNotificationService::class);
+        $this->app->bind(
+            PushNotificationService::class,
+            fn ($app) => $app['config']->get('longlivy.push.driver') === 'expo'
+                ? new ExpoPushNotificationService()
+                : new StubPushNotificationService()
+        );
         $this->app->bind(
             HealthPlatformAdapter::class,
             fn ($app) => new StubHealthPlatformAdapter('stub')

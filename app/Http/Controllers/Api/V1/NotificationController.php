@@ -56,6 +56,19 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function show(Request $request, Notification $notification): JsonResponse
+    {
+        $this->authorize('view', $notification);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification retrieved successfully.',
+            'data' => [
+                'notification' => new NotificationResource($notification),
+            ],
+        ]);
+    }
+
     public function read(Request $request, Notification $notification): JsonResponse
     {
         $this->authorize('update', $notification);

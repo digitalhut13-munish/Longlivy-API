@@ -184,6 +184,54 @@ class MeditationContentApiTest extends TestCase
         ));
     }
 
+    public function test_seeded_content_is_published_with_configured_https_audio(): void
+    {
+        config()->set(
+            'longlivy.content.audio_base_url',
+            'https://audio.test.longlivy'
+        );
+        config()->set(
+            'longlivy.content.thumbnail_base_url',
+            'https://cdn.test.longlivy'
+        );
+
+        $this->seed(MeditationCategorySeeder::class);
+        $this->seed(MeditationSeeder::class);
+
+        Sanctum::actingAs(User::factory()->create());
+
+        $catalog = $this->getJson('/api/v1/meditation')
+            ->assertStatus(200)
+            ->assertJsonPath('data.meta.total', 16)
+            ->json('data.meditations');
+
+        foreach ($catalog as $item) {
+            $this->assertStringStartsWith(
+                'https://audio.test.longlivy/',
+                $item['audio_url']
+            );
+            $this->assertStringStartsWith(
+                'https://audio.test.longlivy/',
+                $item['audio']['url']
+            );
+            $this->assertNull($item['audio']['expires_at']);
+        }
+
+        $detail = $this->getJson('/api/v1/meditation/'.$catalog[0]['id'])
+            ->assertStatus(200);
+
+        $this->assertStringStartsWith(
+            'https://audio.test.longlivy/',
+            $detail->json('data.meditation.audio_url')
+        );
+
+        $categories = $this->getJson('/api/v1/meditation/categories')
+            ->assertStatus(200)
+            ->json('data.categories');
+
+        $this->assertCount(8, $categories);
+    }
+
     public function test_detail_returns_404_message_for_unknown_item(): void
     {
         Sanctum::actingAs(User::factory()->create());

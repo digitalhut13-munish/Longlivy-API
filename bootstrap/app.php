@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -40,5 +41,19 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             throw new NotFoundHttpException('Not found.', $e);
+        });
+
+        // Database errors are logged, but their message (which contains
+        // the SQL text and the database host) is never sent to API
+        // clients - not even when APP_DEBUG is on.
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Server error.',
+                ], 500);
+            }
+
+            return null;
         });
     })->create();

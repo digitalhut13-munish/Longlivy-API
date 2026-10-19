@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * App-owned database notification. Stored as rows keyed by a UUID so
@@ -33,6 +34,15 @@ class Notification extends Model
     protected $keyType = 'string';
 
     public $incrementing = false;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Notification $notification): void {
+            if ($notification->id === null) {
+                $notification->id = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $fillable = [
         'id',

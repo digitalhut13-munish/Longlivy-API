@@ -32,6 +32,11 @@ Route::get('/notifications', [
     'index',
 ]);
 
+Route::get('/notifications/{notification}', [
+    NotificationController::class,
+    'show',
+])->whereUuid('notification');
+
 Route::post('/notifications/read-all', [
     NotificationController::class,
     'readAll',

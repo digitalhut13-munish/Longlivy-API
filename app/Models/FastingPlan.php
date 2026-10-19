@@ -65,6 +65,6 @@ class FastingPlan extends Model
 
     public function overrides(): HasMany
     {
-        return $this->hasMany(FastingPlanOverride::class);
+        return $this->hasMany(FastingPlanOverride::class, 'plan_id');
     }
 }

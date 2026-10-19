@@ -4,6 +4,7 @@ namespace App\Services\Fasting;
 
 use App\Models\Fasting;
 use App\Models\User;
+use App\Services\Notification\NotificationService;
 use App\Services\Streak\StreakService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -12,7 +13,8 @@ use Illuminate\Validation\ValidationException;
 class FastingService
 {
     public function __construct(
-        private readonly StreakService $streakService
+        private readonly StreakService $streakService,
+        private readonly NotificationService $notifications
     ) {
     }
 
@@ -63,7 +65,7 @@ class FastingService
             ? Carbon::parse($data['started_at'])
             : now();
 
-        return $user->fastings()->create([
+        $fasting = $user->fastings()->create([
             'fasting_plan_id' => $data['fasting_plan_id'] ?? null,
             'fasting_type' => $data['fasting_type'],
             'planned_hours' => $data['planned_hours'],
@@ -73,6 +75,25 @@ class FastingService
             'date' => $startedAt->toDateString(),
             'notes' => $data['notes'] ?? null,
         ]);
+
+        $this->notifications->send(
+            $user,
+            'fasting_begins',
+            'Your fast has started',
+            sprintf(
+                '%s fast running. Planned duration: %dh.',
+                ucfirst($fasting->fasting_type),
+                (int) $fasting->planned_hours
+            ),
+            [
+                'fasting_id' => $fasting->id,
+                'fasting_type' => $fasting->fasting_type,
+                'planned_hours' => $fasting->planned_hours,
+                'started_at' => $fasting->started_at?->toIso8601String(),
+            ]
+        );
+
+        return $fasting;
     }
 
     public function cancel(Fasting $fasting): Fasting
@@ -134,6 +155,34 @@ class FastingService
                 $fasting->user,
                 'fasting',
                 $endedAt->copy()->startOfDay()
+            );
+
+            $this->notifications->send(
+                $fasting->user,
+                'fasting_ends',
+                'Your fast has finished',
+                sprintf(
+                    'You completed %s hours of fasting. Time to break your fast.',
+                    round($actualHours, 1)
+                ),
+                [
+                    'fasting_id' => $fasting->id,
+                    'fasting_type' => $fasting->fasting_type,
+                    'actual_hours' => $actualHours,
+                    'status' => $fasting->status,
+                    'ended_at' => $fasting->ended_at?->toIso8601String(),
+                ]
+            );
+
+            $this->notifications->send(
+                $fasting->user,
+                'eating_phase_begins',
+                'Eating window is open',
+                'Your planned eating phase has started.',
+                [
+                    'fasting_id' => $fasting->id,
+                    'started_at' => $fasting->ended_at?->toIso8601String(),
+                ]
             );
         }
 

@@ -34,11 +34,12 @@ class ActivityService
             'active_seconds' => $data['active_seconds'],
             'paused_seconds' => $data['paused_seconds'],
             'distance_meters' => $data['distance_meters'] ?? null,
-            'calories_kcal' => $data['calories_kcal'],
+            'calories_kcal' => $data['calories_kcal'] ?? null,
             'calculation_method' => $data['calculation_method'],
             'avg_heart_rate' => $data['avg_heart_rate'] ?? null,
             'steps' => $data['steps'] ?? null,
             'route_polyline' => $route['points'] ?? null,
+            'route_encoding' => $route['encoding'] ?? null,
             'route_point_count' => $route['point_count'] ?? null,
             'notes' => $data['notes'] ?? null,
         ];

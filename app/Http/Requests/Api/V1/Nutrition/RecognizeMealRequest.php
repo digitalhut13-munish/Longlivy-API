@@ -20,8 +20,8 @@ class RecognizeMealRequest extends FormRequest
             'locale' => ['nullable', 'string', 'max:10'],
             'image' => [
                 'required_if:type,photo',
-                'image',
-                'mimes:jpeg,png,heic',
+                'file',
+                'mimetypes:image/jpeg,image/png,image/heic,image/heif,image/webp',
                 'max:8192',
             ],
             'image_base64' => ['nullable', 'string', 'max:12000000'],

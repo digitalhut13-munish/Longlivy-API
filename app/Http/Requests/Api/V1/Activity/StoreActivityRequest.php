@@ -65,7 +65,7 @@ class StoreActivityRequest extends FormRequest
             ],
 
             'calories_kcal' => [
-                'required',
+                'nullable',
                 'numeric',
                 'min:0',
                 'max:10000',
